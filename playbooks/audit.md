@@ -76,12 +76,13 @@ head — is a finding. Use `teachability` as the principle slot in the finding f
 
 ### 4. Rank everything
 
-Grade severity by the anchors in `<target>/.agents/principles.md` ("Severity
-anchors", just under the finding format) — not by feel. Then rank ALL findings by, in
-order: severity (high > med > low), then blast radius (how much of the repo the
-problem touches or infects), then effort (cheaper fixes rank higher at equal severity
-and radius). Report every finding in ranked order. Never
-suppress, threshold, or "top N" the list — a minor finding is ranked low, not omitted.
+Grade severity by the anchors in the rubric you read in step 2 ("Severity anchors",
+just under the finding format) — `<target>/.agents/principles.md`, or the harness
+copy in read-only mode — not by feel. Then rank ALL findings by, in order: severity
+(high > med > low), then blast radius (how much of the repo the problem touches or
+infects), then effort (cheaper fixes rank higher at equal severity and radius).
+Report every finding in ranked order. Never suppress, threshold, or "top N" the list
+— a minor finding is ranked low, not omitted.
 
 Conditional applicability: categories with no evidence base are skipped, not scored —
 no type-check findings in a repo with no type system. But a missing evidence base

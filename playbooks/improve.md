@@ -13,11 +13,16 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
 1. You have a target repo path. If none was given, ask for one.
 2. The target is seeded: `<target>/.agents/` exists with `ledger.md`,
    `principles.md`, and `conventions.md`. If not, run `playbooks/seed.md` first.
-3. **Base branch.** The base branch for this run is the branch the target has checked
-   out at run start — read it and record it in the ledger as a
-   `- base branch: <name>` line alongside this run's entries. Every branch below is
-   cut from it and merged back into it. Never substitute `main`/`master` for it, and
-   never switch the target's checkout.
+3. **Base branch.** Read the ledger's `Run state` block first. If it already records
+   a `- base branch:` for entries you are resuming (step 4), that recorded branch is
+   this run's base branch — a resumed run must merge back into the branch its
+   worktrees were cut from, not into whatever happens to be checked out now. If it
+   disagrees with the target's current checkout, stop and report both; do not guess
+   which is right. Otherwise — a fresh run, or no recorded value — the base branch is
+   the branch the target has checked out at run start; write it to the ledger's
+   `Run state` block as `- base branch: <name>` before starting. Either way, every
+   branch below is cut from it and merged back into it. Never substitute
+   `main`/`master` for it, and never switch the target's checkout.
 4. Read the ledger top to bottom. Entries with status `in-progress` mean a previous
    run died mid-finding — resume those first (see Workflow step 1). Never start
    fresh work while an `in-progress` entry sits unexamined.
@@ -119,6 +124,11 @@ says `done`, delete the worktree and the branch.
 
 - Make a checkpoint commit in the target (the merged fix plus the ledger update).
   No Co-Authored-By lines.
+- If the fix added or changed the target's build, test, or typecheck command —
+  finding #1 on a testless repo is exactly this case — update that entry in
+  `<target>/.agents/AGENTS.md` in this same pass, verified by running it. Leaving a
+  stale `none verified` there makes every later `playbooks/verify.md` pass skip a
+  suite that now exists and return PASS (unverified-by-tests) against real tests.
 - If this pass taught something a future session in this repo would need — a
   convention the fix had to follow, a trap that cost an attempt — append one line to
   `<target>/.agents/learnings.md` in that file's format, incrementing `seen` on an
@@ -150,9 +160,10 @@ After 3 failed fix attempts on one finding: stop attempting, set
 `status: parked(<gap: context|capability|authority|proof|feedback>)` choosing the
 gap that blocked you, and write the ruling the ledger's standing rules require —
 which gap, what evidence, what would unpark it. Then revert the worktree and move to
-the next finding. Never silently drop a finding, and never conclude "worker
-limitation" from a single failed run — retry before concluding anything about
-capability.
+the next finding — unless this is the baseline finding (readiness step 5's #1), in
+which case the run stops here instead; see Hard stops below. Never silently drop a
+finding, and never conclude "worker limitation" from a single failed run — retry
+before concluding anything about capability.
 
 ### Hard stops
 

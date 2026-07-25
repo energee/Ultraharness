@@ -21,6 +21,13 @@ what is missing.
    anyway; proceed only on explicit acknowledgment.
 5. The harness templates are readable: `<harness>/templates/agents-dir/` must contain
    `AGENTS.md`, `conventions.md`, `principles.md`, `ledger.md`, `learnings.md`.
+6. `.agents/` is not already ignored by the target: run
+   `git -C <target> check-ignore -v .agents/AGENTS.md`. If it reports a matching
+   rule, stop and tell the user — an ignored `.agents/` means step 7's `git add`
+   silently skips everything this playbook writes and the seed is never committed.
+   The user must remove or narrow that rule first. Checking here, before anything is
+   written, is the point: stopping later would leave the target dirty with
+   uncommittable harness files.
 
 ## Workflow
 
@@ -125,13 +132,7 @@ For each of `<target>/AGENTS.md` and `<target>/CLAUDE.md`:
 
 ### 6. Gitignore the worktrees dir
 
-First check that the target does not already ignore the whole `.agents/` directory:
-run `git -C <target> check-ignore -v .agents/AGENTS.md`. If it reports a matching
-rule, stop and tell the user — an ignored `.agents/` means step 7's `git add` will
-silently skip everything this playbook wrote and the seed will never be committed.
-The user must remove or narrow that rule before seeding can complete.
-
-Then read `<target>/.gitignore`. If it does not already cover `.agents/worktrees/`,
+Read `<target>/.gitignore`. If it does not already cover `.agents/worktrees/`,
 append a line `.agents/worktrees/` (create `.gitignore` if absent). If it already
 covers it, change nothing.
 
@@ -166,8 +167,9 @@ touch a file just to have something to commit.
   nothing else.
 - **Templates missing or unreadable**: stop and report; do not improvise a
   `.agents/` layout from memory.
-- **`.agents/` is gitignored in the target** (step 6): stop and report the matching
-  rule; a seed that cannot be committed is not a seed.
+- **`.agents/` is gitignored in the target** (probe item 6): stop and report the
+  matching rule; a seed that cannot be committed is not a seed. Nothing has been
+  written at that point — leave it that way.
 - **On any stop above** — if `<target>/.agents/ledger.md` already exists, append one
   entry recording what stopped the seed and what would unblock it, then report the
   same to the user.

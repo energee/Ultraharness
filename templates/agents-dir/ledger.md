@@ -2,6 +2,15 @@
 
 Findings and their status, across sessions. Append entries; newest at the bottom.
 
+## Run state
+
+Written by `playbooks/improve.md` at run start and read back by a resumed run. One
+block, updated in place — not appended per run.
+
+```
+- base branch: <branch the entries below were worktree'd from>
+```
+
 ## Entry format
 
 ```
