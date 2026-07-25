@@ -36,7 +36,7 @@
 - [ ] **Step 1: Write README.md** — the human front door. Sections:
   - One-paragraph pitch: point any coding agent at this repo to make any repo simpler, DRY-er, KISS, SOLID, YAGNI. No install.
   - **Quick start**: a table of copy-paste prompts, one row per action (Seed / Audit / Improve), each a single prompt string of the form:
-    `Read /path/to/harness/AGENTS.md, then run the <seed|audit|improve> playbook against my repo at <target-path>.`
+    `Read ~/harness/AGENTS.md, then run the <seed|audit|improve> playbook against my repo at <target-path>.`
     with a note that the same prompt works in Claude Code, Codex CLI, Cursor, Gemini CLI, OpenCode, etc.
   - **What gets left behind**: the `.agents/` footprint listing from the spec, verbatim file list with one-line purposes.
   - **How it works**: 5 lines — front door routes to playbooks; audit produces ranked findings + top-actions; improve loop runs audit→fix→verify→de-sloppify→checkpoint in worktrees under `.agents/worktrees/`; ledger survives session death.
