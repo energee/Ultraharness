@@ -21,6 +21,20 @@ observation of this codebase — match them before inventing your own.
 `principles.md` is the condensed rubric (DRY, KISS, SOLID, YAGNI) used to spot and
 rank code-quality findings here. Read it before auditing or improving anything.
 
+<!-- seed.md: replace the placeholder below with one line per lens whose gate fired —
+     fired lenses only; a lens that did not fire is reported to the user, never
+     recorded here. If no gate fired, delete this whole "## Lenses" section, this
+     comment included — a repo with no lenses carries no lens prose. This comment
+     deliberately does not spell the placeholder token: a fill that matched it here
+     too would rewrite these instructions into the seeded file. -->
+## Lenses
+
+`lenses/` holds conditional rubrics that fired against this repo at seed time. They
+apply here alongside `principles.md`, with the same severity anchors and the lens name
+in the principle slot. Which fired, and on what evidence:
+
+{{LENSES}}
+
 ## Ongoing work
 
 `ledger.md` tracks findings and their status across sessions. Read it before starting

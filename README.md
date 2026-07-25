@@ -28,8 +28,17 @@ Seeding writes one directory, `.agents/`, into the target repo:
   principles.md           # condensed rubric (self-contained; no dependency on harness repo)
   ledger.md               # progress ledger — survives compaction and session death
   learnings.md            # repeated lessons, promoted after corroboration
+  lenses/                 # optional: conditional rubrics whose gate fired on this repo
   worktrees/              # gitignored; created on the first improve run, not by seeding
 ```
+
+`lenses/` is the only conditional part. Each lens in the harness (`lenses/` there)
+states a **gate** — a greppable condition, run against your repo at seed time — and
+only the lenses whose gate fires are copied in. A repo with no job queue gets no
+idempotency lens; a repo with no component UI gets no atomic-design lens; a repo where
+nothing fires gets no `lenses/` directory and not one added line. Re-seeding
+re-evaluates the gates: a repo that grows a queue gains the lens on the next seed, and
+a lens whose gate stops firing is left in place and reported, never silently deleted.
 
 `AGENTS.md` and `CLAUDE.md` at the target repo's root become thin pointers into
 `.agents/` (created only if absent; existing files get a pointer block appended, never

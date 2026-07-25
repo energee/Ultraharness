@@ -14,8 +14,9 @@ told to.
 | prove a change is done | `playbooks/verify.md` |
 | check this harness still works | `playbooks/self-test.md` |
 
-Load one playbook at a time. Playbooks reference `principles/` just-in-time — don't
-preload them.
+Load one playbook at a time. Playbooks reference `principles/` (universal rubrics) and
+`lenses/` (conditional rubrics, each gated on evidence in the target) just-in-time —
+don't preload either.
 
 ## Global rules
 

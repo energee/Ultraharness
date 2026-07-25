@@ -20,7 +20,10 @@ what is missing.
    empty output. If dirty, show the user the output and ask whether to proceed
    anyway; proceed only on explicit acknowledgment.
 5. The harness templates are readable: `<harness>/templates/agents-dir/` must contain
-   `AGENTS.md`, `conventions.md`, `principles.md`, `ledger.md`, `learnings.md`.
+   `AGENTS.md`, `conventions.md`, `principles.md`, `ledger.md`, `learnings.md`, and a
+   `lenses/` subdirectory holding one condensed lens per full-form lens in
+   `<harness>/lenses/`. A lens present in one directory and missing from the other is
+   a harness defect — stop and report it.
 6. `.agents/` is not already ignored by the target: run
    `git -C <target> check-ignore -v .agents/AGENTS.md`. If it reports a matching
    rule, stop and tell the user — an ignored `.agents/` means step 7's `git add`
@@ -91,17 +94,18 @@ Also draft a 2-4 sentence `{{REPO_SUMMARY}}`: what the repo is, its ecosystem
 
 On a first seed the `size:` line is the target's own size — nothing has been seeded
 yet, so use it as printed. On a re-seed it is not: the script inventories tracked
-files, so it now also counts the seeded footprint — the five `.agents/` files, both
-adapter files, and `.gitignore` if seeding created it (up to 8 added files, on a repo
-that had no `.gitignore` and neither adapter file; fewer where any of them already
-existed). Do not "correct" the printed number; facts stay the script's. Keep the
+files, so it now also counts the seeded footprint — the five `.agents/` files, any
+lens files copied in step 4a, both adapter files, and `.gitignore` if seeding created
+it (up to 8 added files where no gate fired, on a repo that had no `.gitignore` and
+neither adapter file; fewer where any of them already existed, one more per fired
+lens). Do not "correct" the printed number; facts stay the script's. Keep the
 size already recorded in `.agents/AGENTS.md` — it was measured pre-seed — and revise
 it only when the target's own code has changed.
 
 ### 4. Instantiate `.agents/`
 
-Copy the five files from `<harness>/templates/agents-dir/` into `<target>/.agents/`,
-replacing every `{{...}}` placeholder:
+Copy the five top-level files from `<harness>/templates/agents-dir/` into
+`<target>/.agents/`, replacing every `{{...}}` placeholder:
 
 - `AGENTS.md`: fill `{{REPO_SUMMARY}}`, `{{BUILD_CMD}}`, `{{TEST_CMD}}`,
   `{{TYPECHECK_CMD}}` with the values from steps 2-3.
@@ -110,6 +114,8 @@ replacing every `{{...}}` placeholder:
 - `principles.md`, `ledger.md`, `learnings.md`: copy verbatim (no placeholders).
 
 After writing, search `<target>/.agents/` for the string `{{` — it must not appear.
+Run this check after step 4a, not before: `AGENTS.md`'s `{{LENSES}}` placeholder is
+resolved there (filled if a gate fired, deleted with its section if none did).
 
 **Idempotency — if `<target>/.agents/` already exists:**
 
@@ -124,6 +130,48 @@ After writing, search `<target>/.agents/` for the string `{{` — it must not ap
   template's placeholder. Resetting a recorded base branch would send a resumed run
   merging into the wrong branch.
 - If a file is missing, create it from the template as above.
+
+### 4a. Evaluate the lens gates
+
+The four rubrics in `principles.md` are universal. Lenses are not: each one applies
+only to repos that have the thing it judges, and each states its own **Gate** — an
+observable, greppable condition. Read every file in `<harness>/lenses/` and run that
+file's gate commands against `<target>`, from the target's root, exactly as written.
+
+A gate fires only on its stated result *and* your confirmation from reading one hit —
+a word matched in prose, a changelog, or a lockfile is not evidence. Record, for each
+lens, the command output you based the decision on; a gate decided from memory of the
+repo is not a gate.
+
+Gates judge the target's own code, so they exclude the harness footprint — everything
+under `<target>/.agents/` and the `<!-- harness:begin -->` blocks — exactly as step 3
+does. Each gate command already carries that exclusion; if a hit you are weighing sits
+inside the footprint, it is not evidence. This matters most on a re-seed: the seeded
+files contain words like "retry" in their own prose, and a gate that counted them
+would fire on every previously-seeded repo and stop discriminating.
+
+For each lens whose gate **fires**: copy its condensed counterpart from
+`<harness>/templates/agents-dir/lenses/<name>.md` into `<target>/.agents/lenses/`
+verbatim (no placeholders in these files). Then fill the `{{LENSES}}` placeholder in
+`<target>/.agents/AGENTS.md` with one line per fired lens naming the lens and the
+evidence that fired it.
+
+For each lens whose gate does **not** fire: copy nothing. Say which lens did not fire
+and why in your report to the user — not in the target. A repo where no gate fires
+gets no `.agents/lenses/` directory, and the `## Lenses` section is deleted from
+`<target>/.agents/AGENTS.md` entirely (the template says so in a comment). That repo
+carries zero added lines from this step, which is the point of gating.
+
+**Idempotency — on a re-seed:**
+
+- Re-evaluate every gate against the target as it is now. A repo that has since gained
+  a job queue gains the idempotency lens on this run.
+- A lens already present whose gate no longer fires is **left in place, not deleted**.
+  Note it in the report as a candidate for removal; whether a lens stops applying is
+  the user's call, not yours. Leave its `{{LENSES}}`-derived line in `AGENTS.md` too,
+  and say in the report that the line now records a gate that no longer fires.
+- A lens file the user has edited is never overwritten — refresh only lines that are
+  stale against the current harness template, exactly as for the five top-level files.
 
 ### 5. Adapter files at the target root
 
@@ -157,7 +205,9 @@ switch), stage exactly what this playbook wrote — `.agents/`, the adapter file
 `.gitignore` — and commit with the message `Seed .agents/ harness`. Do not add a
 Co-Authored-By line. Then run `git -C <target> status --porcelain` and confirm none
 of the seeded files remain unstaged. Also confirm the seeded files are tracked:
-`git -C <target> ls-files .agents/` must list all five.
+`git -C <target> ls-files .agents/` must list all five top-level files, plus one entry
+under `lenses/` for each lens whose gate fired in step 4a — and nothing under
+`lenses/` if none fired.
 
 Caveat on the acknowledged-dirty-tree path (probe item 4): if the user already had
 uncommitted edits to a root `AGENTS.md` or `CLAUDE.md`, staging that file stages
@@ -180,7 +230,13 @@ touch a file just to have something to commit.
   the user does not acknowledge proceeding, stop. Report what is dirty and do
   nothing else.
 - **Templates missing or unreadable**: stop and report; do not improvise a
-  `.agents/` layout from memory.
+  `.agents/` layout from memory. A full-form lens with no condensed counterpart (or
+  the reverse) is this same stop — report the mismatch rather than authoring the
+  missing half here.
+- **A lens gate cannot be decided**: if the gate command runs but you cannot confirm a
+  hit is a real construct rather than prose, the gate has not fired. Copy nothing,
+  and say in the report which hit you could not confirm. An undecidable gate is a
+  no-fire, never a fire "to be safe" — a lens that ships on ambiguity is not gated.
 - **`.agents/` is gitignored in the target** (probe item 6): stop and report the
   matching rule; a seed that cannot be committed is not a seed. Nothing has been
   written at that point — leave it that way.
@@ -197,3 +253,6 @@ touch a file just to have something to commit.
 | "The existing AGENTS.md is bad — I'll just rewrite it" | Not yours to rewrite. Existing files get the delimited `<!-- harness:begin -->` block appended (or replaced in place); every other line stays untouched. |
 | "`.agents/` already exists, so re-seeding means re-copying the templates over it" | Re-seeding refreshes only stale lines. User-added content, ledger entries, and learnings are never touched. |
 | "audit-checks.sh already told me the commands, no need to run them" | Its own output says `discovered, NOT run`. Discovery finds candidates; only execution verifies. |
+| "This repo will probably grow a queue eventually — I'll copy the idempotency lens now" | Gates read the repo as it is. A lens copied on speculation taxes the target forever for a thing it does not have; the re-seed adds it the day the queue lands. |
+| "It's a UI repo, obviously the atomic lens applies — no need to run the greps" | Run the gate and record its output. A gate decided by impression is not observable evidence, and the next session cannot check your reasoning. |
+| "The gate no longer fires, so I'll delete the lens it put there last time" | Removal is the user's call. Leave it in place and note it in the report — an agent silently dropping a rubric the user has been auditing against is a surprise, not an update. |

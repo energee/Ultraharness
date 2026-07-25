@@ -65,10 +65,23 @@ you need the reasoning behind a rule). Then:
   repo, not the repo.
 - Apply all four rubrics (DRY, KISS, SOLID, YAGNI), including each rubric's
   "do NOT apply when" exclusions.
+- Read `<target>/.agents/lenses/*.md` if that directory exists, and apply each lens
+  alongside the four — same severity anchors, same ranking rules, same "do NOT apply
+  when" discipline. A lens is in that directory because its gate fired at seed time:
+  **a lens that is present applies.** There is no second judgment call here — do not
+  re-run its gate, and do not decide a present lens is a poor fit. If you believe a
+  lens no longer belongs, say so in the report; removal happens through a re-seed and
+  the user's decision, never mid-audit. In read-only mode there is no seeded
+  `.agents/`, so there are no lenses: audit against the four rubrics only, and say in
+  the report that no lens was evaluated.
 
 Emit every finding in exactly this format:
 
 `[<principle>/<severity high|med|low>] <file:line> — <what> — <smallest fix>`
+
+A lens finding uses the lens name in the principle slot, exactly like a rubric —
+`[idempotency/high]`, `[atomic/med]`. Lens findings are ranked in the same list as the
+rest; they are not a separate section and never a separate report.
 
 ### 3. Teachability judgment
 
@@ -151,3 +164,5 @@ nothing was written to the target.
 | "Seeding is a hassle, I'll just go read-only." | Read-only needs an explicit refusal from the user, not your inference. Unasked-for, the answer is seed first. |
 | "Read-only, but the scratch file may as well live in the target — it's one file." | It's still a write to a repo the user said not to write to. The scratch file goes outside the target; if none was named, ask. |
 | "Everything here is low severity." | Grade against the severity anchors in `principles.md`. Absent tests and broken correctness are high, whatever the fix costs. |
+| "This lens is in `.agents/lenses/` but doesn't really fit this repo — I'll skip it." | Its gate fired at seed time on recorded evidence. Present means applies; disagreement goes in the report, not into a silent skip. |
+| "No `lenses/` directory, but this is clearly a UI repo — I'll apply the atomic lens anyway." | Lenses are chosen by seeding, from gates, and copied into the target. An uncopied lens is not in scope for the audit; re-seed if the repo changed. |

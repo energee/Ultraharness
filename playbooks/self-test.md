@@ -42,6 +42,12 @@ Create a fresh directory in a temp dir and `git init` it. It must have, at minim
   so the audit has one real finding to catch. If the fixture is clean, step 5 proves
   nothing.
 - At least one file large enough to appear in the script's `largest files` list.
+- **No lens gate may fire on it.** This fixture is the no-fire case: keep it free of
+  retry/queue/webhook/cron/migration/deploy constructs and of component-UI files
+  (`.jsx`, `.tsx`, `.vue`, `.svelte`, a `components/` directory with a framework
+  import). Run both lenses' gate commands against it before seeding and confirm each
+  comes back empty — if one fires, adjust the fixture, because step 3 asserts a
+  no-lens footprint and a fixture that quietly fires a gate would mask a real defect.
 
 Commit everything on the fixture's current branch, so seeding starts from a clean
 tree. Record the fixture path; every command below runs against it.
@@ -52,7 +58,12 @@ Read `playbooks/seed.md` and run it against `<fixture>`, as written — includin
 verifying the test command by running it. Then assert the exact footprint:
 
 - `<fixture>/.agents/` contains exactly the five files `AGENTS.md`,
-  `conventions.md`, `principles.md`, `ledger.md`, `learnings.md`.
+  `conventions.md`, `principles.md`, `ledger.md`, `learnings.md` — and, because this
+  fixture fires no lens gate (step 2 built it that way), **no `lenses/` directory**.
+- The no-fire fixture pays nothing for the lens machinery:
+  `grep -ril lens <fixture>/.agents/` returns nothing, and `<fixture>/.agents/AGENTS.md`
+  has no `## Lenses` section. Zero added lines in the common case is this design's own
+  claim; this is where it is checked.
 - No placeholders survive: searching `<fixture>/.agents/` for `{{` returns nothing.
 - `<fixture>/AGENTS.md` and `<fixture>/CLAUDE.md` exist and each carry one pointer
   block.
@@ -99,10 +110,44 @@ Read `playbooks/audit.md` and run it against `<fixture>`, as written. Assert:
 - No finding covers the harness's own footprint — `.agents/` and the pointer blocks
   are quoted in the script report but never judged.
 
+### 5a. Prove the gates gate
+
+A gate that never withholds anything is not a gate. Steps 2-5 covered the no-fire
+case; this step covers the fire case, and both halves are needed — one fixture that
+fires a gate and one that does not.
+
+Build a second fixture, `<fixture2>`, in its own temp dir: same minimum as step 2
+(README, real test command, manifest), plus one construct that fires the idempotency
+gate and nothing that fires the atomic gate — e.g. a queue consumer that handles a
+message and inserts a row, with a retry wrapper around it, and no component-UI files.
+Commit it. Run `playbooks/seed.md` against it as written, then assert:
+
+- `<fixture2>/.agents/lenses/idempotency.md` exists and is byte-identical to
+  `<harness>/templates/agents-dir/lenses/idempotency.md`.
+- `<fixture2>/.agents/lenses/atomic-design.md` does **not** exist. This is the
+  assertion that makes the others mean something: the same run that copied one lens
+  withheld the other, on the same repo, from its gate alone.
+- `<fixture2>/.agents/AGENTS.md` has a `## Lenses` section naming `idempotency` and
+  the evidence that fired it, contains no `{{`, and does not name `atomic`.
+- `git -C <fixture2> ls-files .agents/lenses/` lists exactly the one lens file — a
+  lens seeded but untracked is not seeded, for the same reason step 3 checks tracking.
+- Re-running `seed.md` against `<fixture2>` unchanged copies nothing new and leaves
+  `git -C <fixture2> status --porcelain` empty, exactly as step 4 requires.
+
+Then run `playbooks/audit.md` against `<fixture2>` and assert that the lens is applied
+without being re-judged: the audit's report names `lenses/idempotency.md` among the
+rubrics it read. If it emits an idempotency finding, that finding uses `idempotency`
+in the principle slot and is ranked in the one list with everything else. An audit
+that finds nothing idempotency-related is not a failure — the fixture is small — but
+an audit that never read the lens is.
+
+Delete `<fixture2>` when done, per step 6.
+
 ### 6. Delete the fixture
 
-Remove the temp dir. Leaving it behind means the next self-test silently runs against
-a pre-seeded repo and stops testing the seed path at all.
+Remove both temp dirs — `<fixture>` and `<fixture2>`. Leaving one behind means the
+next self-test silently runs against a pre-seeded repo and stops testing the seed path
+at all.
 
 ### 7. Fix what the run broke
 
@@ -134,7 +179,8 @@ loop.
   environment): stop and report it as a finding against that playbook. Do not
   improvise a substitute step and count the run as passing.
 - **The fixture cannot be created** (no temp dir, no git): stop at step 2. Never fall
-  back to seeding a real repo to keep the self-test moving.
+  back to seeding a real repo to keep the self-test moving. The same holds for
+  `<fixture2>` at step 5a.
 - **On any stop above** — record what stopped the self-test and what would unblock
   it in the ledger's `Run stop` format (see `<harness>/templates/agents-dir/ledger.md`): in
   `<fixture>/.agents/ledger.md` if the fixture got far enough to have one, otherwise
@@ -149,4 +195,5 @@ loop.
 | "The fixture is trivial, the audit finding it nothing is fine." | You planted the duplication precisely so there is a known answer. Missing it is a failed self-test. |
 | "I'll fix the fixture so the assertion passes." | The fixture is the ruler. Bending the ruler to fit the harness is falsifying the test — fix the harness. |
 | "This playbook edit reads better, I'll keep it even though nothing failed." | Every fix traces to an observation from this run. No observation, no edit. |
-| "I'll leave the temp dir; deleting it is cleanup nobody sees." | The next self-test would start pre-seeded and quietly skip the seed path. Delete it. |
+| "I'll leave the temp dir; deleting it is cleanup nobody sees." | The next self-test would start pre-seeded and quietly skip the seed path. Delete both of them. |
+| "Step 5a's second fixture is a lot of setup — the first one proves gating well enough." | The first proves nothing was copied. Only a fixture where one lens fires and another does not proves the gate discriminates rather than always declining. |
