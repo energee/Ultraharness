@@ -50,6 +50,12 @@ record `none` for it — that is an honest answer, not a failure.
 
 ### 3. Observe conventions
 
+Observe the target's own code only. Exclude the harness's own footprint — everything
+under `<target>/.agents/` and the `<!-- harness:begin -->` blocks in the target's root
+`AGENTS.md` / `CLAUDE.md` — from both the conventions and `{{REPO_SUMMARY}}`. That
+footprint is yours, not the repo's; counting it makes every re-seed rewrite the
+summary with numbers that grew only because you seeded.
+
 Read enough of the target's source to fill each section of `conventions.md`
 (Layout, Naming, Testing patterns, Error handling, Commit style — for commit style,
 read recent `git -C <target> log` output). Rules of evidence:
@@ -62,7 +68,8 @@ read recent `git -C <target> log` output). Rules of evidence:
   inventing content.
 
 Also draft a 2-4 sentence `{{REPO_SUMMARY}}`: what the repo is, its ecosystem
-(from the `detected:` line), and rough size (from the `size:` line).
+(from the `detected:` line), and rough size (from the `size:` line — on a re-seed
+that line counts the `.agents/` files too, so subtract them).
 
 ### 4. Instantiate `.agents/`
 
@@ -91,7 +98,7 @@ After writing, search `<target>/.agents/` for the string `{{` — it must not ap
 
 For each of `<target>/AGENTS.md` and `<target>/CLAUDE.md`:
 
-- **If absent**: create it containing a 3-line pointer, wrapped in the delimiters:
+- **If absent**: create it containing exactly this pointer block, delimiters included:
 
   ```
   <!-- harness:begin -->
@@ -119,6 +126,11 @@ what this playbook wrote — `.agents/`, the adapter files, `.gitignore` — and
 with the message `Seed .agents/ harness`. Do not add a Co-Authored-By line. Then run
 `git -C <target> status --porcelain` and confirm none of the seeded files remain
 unstaged.
+
+On a re-seed that found nothing stale there is nothing to stage, and `git commit`
+will exit nonzero saying so. That is the idempotent success case, not a failure:
+report "already current, no commit" and stop. Never force an empty commit, and never
+touch a file just to have something to commit.
 
 ## Stop conditions
 

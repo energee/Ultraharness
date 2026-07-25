@@ -40,6 +40,13 @@ you need the reasoning behind a rule). Then:
 - Read each of the top-10 largest files from the script's `largest files` section.
 - Read each pair listed under `duplication candidates` — they are candidates, not
   verdicts; verify before flagging.
+- Skip harness-owned entries in both lists — anything under `.agents/` and the
+  `<!-- harness:begin -->` pointer blocks in the target's root `AGENTS.md` /
+  `CLAUDE.md`. On a seeded repo they dominate both lists (the two pointer files are
+  ~100% identical by construction). Still quote them in the script's report; just
+  never score them. The same exclusion applies when you count references to decide
+  whether something is unused: a symbol or file named only from `.agents/` has zero
+  real callers, because the mention is your own note about the repo, not the repo.
 - Apply all four rubrics (DRY, KISS, SOLID, YAGNI), including each rubric's
   "do NOT apply when" exclusions.
 
@@ -65,7 +72,9 @@ suppress, threshold, or "top N" the list — a minor finding is ranked low, not 
 Conditional applicability: categories with no evidence base are skipped, not scored —
 no type-check findings in a repo with no type system. But a missing evidence base
 that should exist is itself a finding: no tests is a high-severity finding, not an
-excuse to skip the testing category quietly.
+excuse to skip the testing category quietly. Use `testing` as the principle slot for
+those, the way step 3 uses `teachability` — a test suite that exists but asserts
+nothing counts as missing.
 
 ### 5. Top actions
 
