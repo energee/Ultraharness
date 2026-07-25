@@ -25,14 +25,18 @@ typecheck commands are the verified ones recorded in `<target>/.agents/AGENTS.md
    to run — note that up front: the verdict below must be
    **PASS (unverified-by-tests)** or FAIL, never a bare PASS, and never a silent
    skip.
-   - **Unless the change under verification is the one that adds the suite.** Read
-     the step-2 diff: if it introduces tests, the recorded `none` is stale — it
-     describes the repo before this change, and this change is what makes it false.
+   - **Unless the diff introduces test files.** Read the step-2 diff: if it adds
+     tests, the recorded `none` is stale — it describes the repo before this change,
+     and this change is what makes it false. The trigger is the diff, not which
+     finding is being worked: any pass that adds tests earns a normal verdict.
      Determine the new suite's command from the diff and the target's README, run
-     it, and verdict on it normally (PASS or FAIL). Verifying a test-adding change
-     against the record instead of against the diff is how a broken new suite passes
-     its own gate: the one change whose whole purpose is to create a suite would be
-     the one change never actually run.
+     it, and verdict on it normally (PASS or FAIL). If the added suite cannot be run
+     at all — no runner, no determinable command — that is **FAIL**, not stop
+     condition 3: the change itself introduced the unrunnable suite, so it is a
+     verdict on the change, not an environment problem.
+     Verifying a test-adding change against the record instead of against the diff
+     is how a broken new suite passes its own gate: the one change whose whole
+     purpose is to create a suite would be the one change never actually run.
 
 ## Workflow
 
@@ -43,7 +47,10 @@ No caching, no partial runs scoped to "the files I touched", and no reuse of a r
 from earlier in the session — "it passed earlier" is not evidence, because the code
 has changed since earlier. If the suite offers a cache-bypass flag, use it. If
 `.agents/AGENTS.md` records `none` / `none verified` for tests there is nothing to
-run here — say so and carry that into the verdict.
+run here — say so and carry that into the verdict — **unless probe item 3 found that
+the diff introduces test files**, in which case run that new suite here, as probe
+item 3 directs. The record describes the repo before this change; the diff is what
+this step verifies.
 
 ### 2. Run typecheck and build
 
@@ -76,8 +83,8 @@ status, failure names). A verdict with no quoted output is invalid; redo the run
 - **PASS** requires: every recorded command ran fresh and succeeded, the full diff
   was read, and step 4 raised nothing.
 - **PASS (unverified-by-tests)** requires: `.agents/AGENTS.md` records `none` or
-  `none verified` for tests *and* the change under verification does not itself add
-  a suite (so there was genuinely no suite to run — see probe item 3), the full diff was read
+  `none verified` for tests *and* the diff introduces no test files (so there was
+  genuinely no suite to run — see probe item 3), the full diff was read
   end to end, step 4 raised nothing, and every command that *is* recorded — build,
   typecheck — ran fresh and succeeded. Name it exactly this way, with the qualifier;
   it is an honest verdict about a testless repo, not a softened PASS, and callers
@@ -103,9 +110,9 @@ its own evidence — not something to slip into a verification pass.
 - **Test command itself is broken** (command not found, harness crash before any
   test runs): stop and report it — that is an environment/seed problem, not a
   verdict on the change.
-- **On any stop above** — if `<target>/.agents/ledger.md` exists, append one entry
-  recording what stopped the verification and what would unblock it, then report the
-  same to the user.
+- **On any stop above** — if `<target>/.agents/ledger.md` exists, append one record
+  in the ledger's `Run stop` format (see `templates/agents-dir/ledger.md`), then
+  report the same to the user.
 
 ## Anti-rationalization table
 
@@ -116,4 +123,5 @@ its own evidence — not something to slip into a verification pass.
 | "The subagent said it passed" | A subagent's report is a claim, not evidence. Re-run the commands and read the diff yourself. |
 | "I'll skim the diff summary instead of the hunks" | Summaries hide the one hunk that matters. Read every hunk or the verdict is invalid. |
 | "No test suite here, so I'll just write PASS" | Write PASS (unverified-by-tests). A bare PASS claims evidence you do not have. |
+| "AGENTS.md records `none`, so there is nothing to run" | Check the diff first. If this change adds tests, the record is stale and this change is what made it stale — run the new suite and give a real verdict. |
 | "This test is flaky/wrong, I'll just relax it so we pass" | On FAIL the fix iterates, never the test. A wrong test is its own finding, raised separately with evidence. |

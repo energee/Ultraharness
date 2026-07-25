@@ -61,8 +61,9 @@ earlier, with files this playbook did not write. After verifying, re-run
 `git -C <target> status --porcelain`. Anything new is either already covered by the
 target's ignore rules, or it is a gap in them. Delete the artifacts; do not stage them
 in step 7, and do not add ignore rules on the target's behalf — a missing rule the
-target clearly should have is a finding for `playbooks/audit.md`, not a file to edit
-here.
+target clearly should have is worth naming in your report to the user, not a file to
+edit here — step 6's `.agents/worktrees/` line is the one ignore rule this playbook
+owns.
 
 ### 3. Observe conventions
 
@@ -184,8 +185,8 @@ touch a file just to have something to commit.
   matching rule; a seed that cannot be committed is not a seed. Nothing has been
   written at that point — leave it that way.
 - **On any stop above** — if `<target>/.agents/ledger.md` already exists, append one
-  entry recording what stopped the seed and what would unblock it, then report the
-  same to the user.
+  record in the ledger's `Run stop` format (see `templates/agents-dir/ledger.md`),
+  then report the same to the user.
 
 ## Anti-rationalization table
 

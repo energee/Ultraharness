@@ -40,14 +40,12 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
    finding #1, ranked above everything else, and is fixed first so every later
    failure is attributable to a change, not to the starting state. Record the
    baseline result (pass/fail, quoted summary line) before touching anything.
-   - A red baseline is *your* entry to write, not the audit's. `playbooks/audit.md`
-     grades code quality, and its `testing` slot covers only a missing evidence base —
-     no suite, or a suite that asserts nothing. A suite that runs, asserts, and fails
-     is neither, so audit emits nothing for it and step 1's queue comes back without
-     it. Write the entry here, before step 1: slug `red-baseline`, principle slot
-     `testing`, severity `high`, `file:line` the first failing assertion, the quoted
-     summary line as evidence. Skip this and the gate is silently defeated — the loop
-     walks straight past the red suite to the next finding.
+   - A red baseline is *your* finding to write, not the audit's — `playbooks/audit.md`
+     grades code quality, and its `testing` slot covers only a missing evidence base
+     (no suite, or a suite that asserts nothing). A suite that runs, asserts, and
+     fails is neither, so audit emits nothing for it. Carry the red result into step
+     1, which writes the entry; do not write it here, or step 1 would see a non-empty
+     queue and skip the audit entirely.
    - If `.agents/AGENTS.md` records `none verified` or `none` for tests, proceed:
      both mean the same thing here — there is no test suite to run. The missing test
      suite IS finding #1. For every *other* finding, while no suite exists,
@@ -103,6 +101,17 @@ Loop the following. One pass = one finding.
 - If the ledger has no open entries (first run, or queue drained), run
   `playbooks/audit.md` on the target. It writes ranked `open` entries and a top-3
   queue into the ledger.
+- **If readiness step 5 recorded a red baseline**, add its entry to the queue now,
+  after the audit, ranked above everything the audit produced: slug `red-baseline`,
+  principle slot `testing`, severity `high`, `file:line` the first failing assertion,
+  the quoted summary line as evidence.
+  - **Unless the ledger already carries a `red-baseline` entry** — one per target,
+    ever. If that entry is `open` or `in-progress`, it is already your queue's head;
+    work it. If it is `parked`, the suite is red for a reason a previous run could not
+    resolve and recorded a ruling for: that is the Hard stop below, immediately — stop
+    the run and report the existing ruling. Writing a second entry would hand the
+    parked finding a fresh 0/3 budget and walk straight back into the loop the hard
+    stop exists to end.
 
 ### 2. Pick
 
@@ -243,11 +252,14 @@ which gap, what evidence, what would unpark it. Then revert the worktree and mov
 the next finding.
 
 Unless this is the baseline finding (readiness step 5's #1): then the run stops here
-instead — and **leave its worktree in place, unreverted**. The attempts it holds are
-the evidence behind the ruling's "what would unpark it", and a human resolving an
-`authority` gap reads them. This is the one worktree the loop deliberately keeps; say
-in the report that it is there and what is in it. Everything else about the stop is in
-Hard stops below.
+instead, and its attempts are kept as evidence — a human resolving an `authority` gap
+reads them to see what was already tried. Keeping them means **committing** them, not
+just leaving the worktree: commit the last attempt on the finding's branch with a
+first line beginning `parked(<finding-slug>): ` — deliberately not the `fix(` form, so
+step 1's resume path cannot mistake it for a landed fix — and name that branch in the
+ruling. An uncommitted worktree is not preservation: step 3's reset path wipes it the
+moment anything restarts the finding. Leave the worktree in place too, and say in the
+report that it is there. Everything else about the stop is in Hard stops below.
 
 Never silently drop a finding, and never conclude "worker limitation" from a single
 failed run — retry before concluding anything about capability.
@@ -268,26 +280,26 @@ failed run — retry before concluding anything about capability.
   report; do not self-certify fixes.
 - The run's base branch moved underneath you in ways you cannot cleanly merge
   → stop, write the ledger, report the conflict.
-- **On any stop above** — record the stop in the ledger, then commit it, then report
-  to the user. Both halves matter:
-  - **Record it** under a `## <date: ISO YYYY-MM-DD> run-stopped` heading with two
-    lines, `- stopped: <what stopped the run>` and `- unblocks: <what would clear
-    it>`. It is a run record, not a finding, so it does not take the `Entry format`
-    fields — no status, no attempts, no delta. Skip it entirely when a parked
-    finding's own `ruling:` already says both things, as the parked-baseline stop
-    does; one honest record beats two that can drift apart.
-  - **Commit it.** Every stop above bypasses step 8, the only step that commits
-    anything in the target, so the ledger write lands in the working tree and stays
-    there. That defeats the point of writing it: an uncommitted ledger does not
-    survive a checkout, a stash, or a branch switch, and the parked ruling is the most
-    expensive thing the run produced. Commit `.agents/ledger.md` on the base branch
-    before reporting, and leave the target's tree clean.
+- **On any stop — the ones above and the safety envelope alike** — record the stop in
+  the ledger, then commit it, then report to the user. Both halves matter:
+  - **Record it** in the ledger's `Run stop` format (see
+    `templates/agents-dir/ledger.md`). It is a run record, not a finding, so it does
+    not take the `Entry format` fields — no status, no attempts, no delta. Skip it
+    entirely when a parked finding's own `- ruling:` already says both things, as the
+    parked-baseline stop does; one honest record beats two that can drift apart.
+  - **Commit it.** Every stop bypasses step 8, the only step that commits anything in
+    the target, so the ledger write lands in the working tree and stays there. That
+    defeats the point of writing it: an uncommitted ledger does not survive a
+    checkout, a stash, or a branch switch, and the parked ruling is the most expensive
+    thing the run produced. Commit `.agents/ledger.md` on the base branch before
+    reporting, and leave the target's tree clean.
 
 ## Anti-rationalization table
 
 | Excuse | Rebuttal |
 | --- | --- |
 | "The baseline is only a little red." | The gate holds. Red baseline = finding #1, fixed first. Nothing else starts before it. |
+| "The suite is still red, so I'll open a fresh red-baseline finding." | One per target, ever. A parked `red-baseline` is the hard stop, not a new entry with a new 0/3 budget. |
 | "I'll batch five findings in one worktree." | One finding, one worktree, one verify. Batching makes failures unattributable and reverts impossible. |
 | "De-sloppify is overhead on a small diff." | It runs. On a small diff it's cheap; on any diff it's where the slop hides. |
 | "I'm close — one more attempt past 3 will crack it." | Park it with a gap ruling. The 4th attempt is what the next run, with fresh context, is for. |

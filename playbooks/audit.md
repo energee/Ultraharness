@@ -45,7 +45,7 @@ looks wrong, say so as a finding — but still quote the script's output unchang
 ### 2. Judgment pass
 
 Read the target's condensed rubric at `<target>/.agents/principles.md` — or the
-harness copy at `templates/agents-dir/principles.md` in read-only mode (it is
+harness copy at `<harness>/templates/agents-dir/principles.md` in read-only mode (it is
 self-contained; the harness repo's `principles/` directory holds the full versions if
 you need the reasoning behind a rule). Then:
 
@@ -133,8 +133,8 @@ nothing was written to the target.
 - **Target not seeded and seeding fails** — stop and report why, unless the user
   explicitly declined seeding or said the target must not be written to; do not audit
   an unseeded repo from memory of the rubrics.
-- **On any stop** — if a ledger exists, append one entry recording what stopped the
-  audit and what would unblock it; then report the same to the user.
+- **On any stop** — if a ledger exists, append one record in the ledger's `Run stop`
+  format (see `templates/agents-dir/ledger.md`); then report the same to the user.
 
 ## Anti-rationalization table
 

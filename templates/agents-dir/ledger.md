@@ -19,6 +19,18 @@ block, updated in place — not appended per run.
 - status: open | in-progress | done | parked(<gap: context|capability|authority|proof|feedback>)
 - attempts: <n>/3
 - delta: <before → after evidence, e.g. "dup blocks 14 → 9; tests green">
+- ruling: <parked entries only — which gap, what evidence, what would unpark it>
+```
+
+## Run stop format
+
+Written by any playbook that stops a run early. This is a run record, not a finding:
+no status, no attempts, no delta.
+
+```
+## <date: ISO YYYY-MM-DD> run-stopped
+- stopped: <what stopped the run>
+- unblocks: <what would clear it>
 ```
 
 ## Standing rules

@@ -136,8 +136,9 @@ loop.
 - **The fixture cannot be created** (no temp dir, no git): stop at step 2. Never fall
   back to seeding a real repo to keep the self-test moving.
 - **On any stop above** — record what stopped the self-test and what would unblock
-  it: in `<fixture>/.agents/ledger.md` if the fixture got far enough to have one,
-  otherwise in the report to the user. Delete the fixture either way (step 6).
+  it in the ledger's `Run stop` format (see `templates/agents-dir/ledger.md`): in
+  `<fixture>/.agents/ledger.md` if the fixture got far enough to have one, otherwise
+  in the report to the user. Delete the fixture either way (step 6).
 
 ## Anti-rationalization table
 
