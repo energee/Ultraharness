@@ -84,7 +84,7 @@ infects), then effort (cheaper fixes rank higher at equal severity and radius).
 Report every finding in ranked order. Never suppress, threshold, or "top N" the list
 — a minor finding is ranked low, not omitted.
 
-Conditional applicability: categories with no evidence base are skipped, not scored —
+Conditional applicability: categories with no evidence base are skipped, not reported —
 no type-check findings in a repo with no type system. But a missing evidence base
 that should exist is itself a finding: no tests is a high-severity finding, not an
 excuse to skip the testing category quietly. Use `testing` as the principle slot for
@@ -140,6 +140,6 @@ nothing was written to the target.
 | "I'll estimate the line counts / re-derive the facts myself." | Script only. If the script can't produce a fact, its absence is stated — never your estimate. |
 | "The duplication candidate is probably real, no need to read both files." | Candidates are best-effort string matches. Read both files or don't flag it. |
 | "No tests, so I'll skip the testing category." | Skipped categories need an absent evidence base that's legitimately absent. Missing tests is a high-severity finding. |
-| "The repo has our `.agents/` dir, that's worth points." | Never. Audits judge outcomes only — harness-owned files are never a finding. |
+| "The repo has our `.agents/` dir, that counts in the repo's favor." | Never. Audits judge outcomes only — harness-owned files are never a finding. |
 | "Seeding is a hassle, I'll just go read-only." | Read-only needs an explicit refusal from the user, not your inference. Unasked-for, the answer is seed first. |
 | "Everything here is low severity." | Grade against the severity anchors in `principles.md`. Absent tests and broken correctness are high, whatever the fix costs. |

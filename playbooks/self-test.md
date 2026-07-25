@@ -96,7 +96,7 @@ Read `playbooks/audit.md` and run it against `<fixture>`, as written. Assert:
   ranked with nothing suppressed.
 - `<fixture>/.agents/ledger.md` gained one `open` entry per finding, in the ledger's
   entry format, plus the top-3 slugs.
-- No finding scores the harness's own footprint — `.agents/` and the pointer blocks
+- No finding covers the harness's own footprint — `.agents/` and the pointer blocks
   are quoted in the script report but never judged.
 
 ### 6. Delete the fixture
