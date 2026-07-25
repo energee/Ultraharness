@@ -52,17 +52,13 @@ you need the reasoning behind a rule). Then:
 - Read each of the top-10 largest files from the script's `largest files` section.
 - Read each pair listed under `duplication candidates` — they are candidates, not
   verdicts; verify before flagging.
-- Skip harness-owned entries in both lists — anything under `.agents/` and the
-  `<!-- harness:begin -->` pointer blocks in the target's root `AGENTS.md` /
-  `CLAUDE.md`. On a seeded repo they dominate both lists (the two pointer files are
-  ~100% identical by construction). Still quote them in the script's report; just
-  never make them a finding. What is excluded is the block, not the file: a root
-  `AGENTS.md` or `CLAUDE.md` that also carries the target's own content is still
-  judged on that content — skip only the delimited block. Skip such a file whole only
-  when the block is all it contains. The same exclusion applies when you count
-  references to decide whether something is unused: a symbol or file named only from
-  `.agents/` has zero real callers, because the mention is your own note about the
-  repo, not the repo.
+- Skip harness-owned entries in both lists, per the footprint rule in
+  `<harness>/AGENTS.md`. On a seeded repo they dominate both (the two pointer files
+  are ~100% identical by construction). Still quote them in the script's report; just
+  never make them a finding. Skip a root `AGENTS.md` / `CLAUDE.md` whole only when the
+  pointer block is all it contains. The rule also governs reference counts: a symbol
+  named only from `.agents/` has zero real callers, because the mention is your own
+  note about the repo, not the repo.
 - Apply all four rubrics (DRY, KISS, SOLID, YAGNI), including each rubric's
   "do NOT apply when" exclusions.
 - Read `<target>/.agents/lenses/*.md` if that directory exists, and apply each lens

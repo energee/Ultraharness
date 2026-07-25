@@ -25,3 +25,10 @@ don't preload either.
   clobbered.
 - All findings are ranked — never report a partial list.
 - Evidence before claims: no completion claim without fresh output to back it.
+- **The harness footprint is never evidence about the target.** Everything under
+  `<target>/.agents/` and the `<!-- harness:begin -->`…`<!-- harness:end -->` blocks in
+  the target's root `AGENTS.md` / `CLAUDE.md` is your own output. Never count it, judge
+  it, measure it, or let it fire a gate. In those two root files the exclusion is the
+  delimited block, not the file — content the target already had is the repo's own, and
+  is evidence like any other file. Playbooks state only what this means at their step;
+  the rule itself lives here.

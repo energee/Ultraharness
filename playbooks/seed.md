@@ -70,13 +70,10 @@ owns.
 
 ### 3. Observe conventions
 
-Observe the target's own code only. Exclude the harness's own footprint — everything
-under `<target>/.agents/` and the `<!-- harness:begin -->` blocks in the target's root
-`AGENTS.md` / `CLAUDE.md` — from both the conventions and `{{REPO_SUMMARY}}`. That
-footprint is yours, not the repo's; counting it makes every re-seed rewrite the
-summary with numbers that grew only because you seeded. In those two root files the
-exclusion is the delimited block, not the file: content the target already had is the
-repo's own, and is evidence like any other file.
+Observe the target's own code only. Per the footprint rule in `<harness>/AGENTS.md`,
+exclude the harness footprint from both the conventions and `{{REPO_SUMMARY}}`:
+counting it makes every re-seed rewrite the summary with numbers that grew only
+because you seeded.
 
 Read enough of the target's source to fill each section of `conventions.md`
 (Layout, Naming, Testing patterns, Error handling, Commit style — for commit style,
@@ -143,12 +140,11 @@ a word matched in prose, a changelog, or a lockfile is not evidence. Record, for
 lens, the command output you based the decision on; a gate decided from memory of the
 repo is not a gate.
 
-Gates judge the target's own code, so they exclude the harness footprint — everything
-under `<target>/.agents/` and the `<!-- harness:begin -->` blocks — exactly as step 3
-does. Each gate command already carries that exclusion; if a hit you are weighing sits
-inside the footprint, it is not evidence. This matters most on a re-seed: the seeded
-files contain words like "retry" in their own prose, and a gate that counted them
-would fire on every previously-seeded repo and stop discriminating.
+Gates judge the target's own code, so the footprint rule in `<harness>/AGENTS.md`
+applies here too: each gate command already carries the exclusion, and a hit inside
+the footprint is not evidence. This matters most on a re-seed — the seeded files
+contain words like "retry" in their own prose, and a gate that counted them would fire
+on every previously-seeded repo and stop discriminating.
 
 For each lens whose gate **fires**: copy its condensed counterpart from
 `<harness>/templates/agents-dir/lenses/<name>.md` into `<target>/.agents/lenses/`

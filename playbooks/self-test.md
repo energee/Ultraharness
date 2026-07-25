@@ -143,6 +143,43 @@ an audit that never read the lens is.
 
 Delete `<fixture2>` when done, per step 6.
 
+### 5b. Run one improve pass end to end
+
+`improve.md` and `verify.md` are the loop that actually changes a repo, and prose
+that has never been executed is unverified. Run exactly one pass.
+
+Build a third fixture, `<fixture3>`: a manifest and a **real test command whose suite
+asserts something and is green at run start** (a testless fixture would route every
+verdict to PASS (unverified-by-tests) and prove nothing about the gate), plus one
+planted finding a minimal fix can close — the duplicated block from step 2 is enough.
+Commit it, seed it, and audit it, so the ledger carries a real queue.
+
+Then run `playbooks/improve.md` against it with the safety envelope overridden to
+**1 finding**, and assert, in order:
+
+- **Baseline gate**: the run recorded the pre-run suite result before touching
+  anything, and the ledger's `Run state` block records `- base branch: <the branch the
+  fixture had checked out>` — not `main` unless that is what was checked out.
+- **Isolation**: a worktree exists at `<fixture3>/.agents/worktrees/<slug>/` on branch
+  `harness/<slug>`, cut from the base branch, while the pass is in flight, and the
+  entry reads `status: in-progress` before any fix is written.
+- **Verify ran for real**: the pass's verdict is one of the three verdicts, and it
+  quotes fresh command output. A verdict with no quoted output is a defect in
+  `verify.md`, not a formatting nit.
+- **Merge back**: the base branch carries a commit whose first line begins exactly
+  `fix(<slug>): `, with no Co-Authored-By line, and the fix is present in the
+  fixture's working tree.
+- **Ledger before deletion**: the entry reads `status: done` with a `delta` quoting
+  real before/after evidence, and only then are the worktree and branch gone —
+  `git -C <fixture3> worktree list` shows one entry and `git -C <fixture3> branch
+  --list 'harness/*'` is empty.
+- **Checkpoint**: `git -C <fixture3> status --porcelain` is empty — the ledger update
+  is committed, not left dirtying the target.
+
+Assert the negative too, the way step 5a does: the run stopped after one finding
+because the envelope said 1, reported scope remaining, and left the still-`open`
+entries open. An envelope that never stops a run is not an envelope.
+
 ### 6. Delete the fixture
 
 Remove both temp dirs — `<fixture>` and `<fixture2>`. Leaving one behind means the
@@ -162,11 +199,14 @@ Docs travel with the fix: if the behavior you changed is described in `README.md
 
 ## Not covered
 
-This playbook exercises `seed.md` and `audit.md` end to end against a real fixture.
-It does **not** run `improve.md` or `verify.md` — no fix loop, no worktree, no
-verdict is executed here, so nothing here is evidence about those two. A green
-self-test means the seed and audit paths work; it says nothing about the improve
-loop.
+This playbook exercises `seed.md` and `audit.md` end to end, and **one** pass of
+`improve.md`/`verify.md` (step 5b), against real fixtures.
+
+Still uncovered, and so not evidence about anything: the **resume** path (step 1's
+three worktree states after a session dies mid-pass), the **park** path (3 failed
+attempts, gap ruling, parked-baseline hard stop), the **testless** route through
+PASS (unverified-by-tests), and any run longer than one pass. A green self-test says a
+single pass works end to end; it says nothing about the loop across passes.
 
 ## Stop conditions
 
