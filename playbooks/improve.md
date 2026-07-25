@@ -17,11 +17,16 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
    run died mid-finding — resume those first (see Workflow step 1). Never start
    fresh work while an `in-progress` entry sits unexamined.
 4. **Clean-baseline gate.** Run the target's test suite (the test command from
-   `<target>/.agents/AGENTS.md`; if none is recorded, discovering it is part of
-   seeding — go back). A red baseline does not block the run; it becomes finding #1,
-   ranked above everything else, and is fixed first so every later failure is
-   attributable to a change, not to the starting state. Record the baseline result
-   (pass/fail, quoted summary line) before touching anything.
+   `<target>/.agents/AGENTS.md`). A red baseline does not block the run; it becomes
+   finding #1, ranked above everything else, and is fixed first so every later
+   failure is attributable to a change, not to the starting state. Record the
+   baseline result (pass/fail, quoted summary line) before touching anything.
+   - If `.agents/AGENTS.md` records `none verified` for tests, proceed: the missing
+     test suite IS finding #1, and until it's fixed `playbooks/verify.md` will mark
+     changes "unverifiable by tests" per its own probe — that's the honest verdict,
+     not a blocker.
+   - Only a `.agents/AGENTS.md` that records no test entry at all (not even
+     `none verified`) means seeding is incomplete — run `playbooks/seed.md` first.
 
 ## Workflow
 
@@ -32,9 +37,11 @@ Loop the following. One pass = one finding.
 - If the ledger has `open` or `in-progress` entries, that is your queue — do not
   re-audit first. An `in-progress` entry is resumed at whatever step its worktree
   and attempts count indicate: if its worktree `.agents/worktrees/<finding-slug>/`
-  exists, inspect the diff there and continue from fix or verify; if no worktree
-  exists, treat it as `open` and restart the pass (increment nothing — attempts
-  count only completed fix attempts).
+  exists, first check whether its branch is already merged into the default branch
+  (a run that died between merge and cleanup) — if merged, jump to step 7's ledger
+  update; otherwise inspect the diff there and continue from fix or verify. If no
+  worktree exists, treat it as `open` and restart the pass (increment nothing —
+  attempts count only completed fix attempts).
 - If the ledger has no open entries (first run, or queue drained), run
   `playbooks/audit.md` on the target. It writes ranked `open` entries and a top-3
   queue into the ledger.
@@ -87,15 +94,18 @@ diff line by line and simplify. If de-sloppifying changed anything, run verify a
 
 ### 7. Merge back
 
-Merge the branch into the target's default branch, then delete the worktree and the
-branch. If the merge conflicts with work from an earlier pass, resolve it now,
-re-verify, then merge — never leave a finding stranded on its branch.
+Merge the branch into the target's default branch. If the merge conflicts with work
+from an earlier pass, resolve it now, re-verify, then merge — never leave a finding
+stranded on its branch. Then, BEFORE deleting the worktree, update the ledger entry:
+`status: done`, final `attempts`, and `delta` with before/after evidence (e.g.
+`dup blocks 14 → 9; tests green` — quote real output, not recollection). The ledger
+must never claim less than reality: a run that dies between merge and ledger write
+would otherwise leave a landed fix marked `in-progress` with no worktree, which the
+resume path in step 1 cannot distinguish from unstarted work. Only after the ledger
+says `done`, delete the worktree and the branch.
 
 ### 8. Checkpoint
 
-- Update the ledger entry: `status: done`, final `attempts`, and `delta` with
-  before/after evidence (e.g. `dup blocks 14 → 9; tests green` — quote real output,
-  not recollection).
 - Make a checkpoint commit in the target (the merged fix plus the ledger update).
   No Co-Authored-By lines.
 - Report scope remaining: findings done this run, findings still open, envelope
@@ -131,8 +141,10 @@ capability.
 
 ### Hard stops
 
-- Baseline test command cannot be determined or run at all → stop; that is a seeding
-  gap, report it.
+- `.agents/AGENTS.md` records no test entry at all, or the recorded test command
+  errors before running any test (command not found, harness crash) → stop; that is
+  a seeding gap, report it. A recorded `none verified` is NOT this stop — it
+  proceeds with missing tests as finding #1 (readiness step 4).
 - Verify itself is broken (the harness's gate, not the target's tests) → stop and
   report; do not self-certify fixes.
 - The target's default branch moved underneath you in ways you cannot cleanly merge
