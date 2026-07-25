@@ -141,25 +141,27 @@ Three standing rules shape what counts as an improvement:
   serialized field) or remove a guard, do not attempt it. Moving a guard is not
   removing one: consolidating duplicated checks into a shared home that every affected
   boundary still calls is a normal fix, not a park — that is the DRY finding doing its
-  job. Set the entry to
-  `parked(authority)` with `attempts: 0/3` and a ruling giving all three fields the
-  ledger requires: the gap is `authority`, the evidence is exactly what the fix would
-  destroy, and what would unpark it is a human's explicit go-ahead for that specific
-  deletion. Until then the entry is not in the queue, whatever its attempts count
-  says — `0/3` records a policy park, not an untouched budget to be spent later.
-  Two arrivals, and they differ. Reaching this rule at **step 2**, nothing has been
-  built yet: there is no worktree and no attempt, so `0/3` is literally true. Reaching
-  it from a **step 5 guard FAIL**, a worktree and real attempts exist: keep the
-  attempts count as it stands rather than rewriting it to `0/3` — the ledger's history
-  is the point — and revert the worktree as the failure path does, unless this is the
-  baseline finding, whose worktree that path deliberately keeps.
-  Commit the ledger on the base branch before moving on; this rule can exit the pass
-  before step 8, the only step that otherwise commits it, and an uncommitted ruling
-  does not survive a checkout.
-  Then move to the next finding and the run continues — unless this is the baseline
-  finding (readiness step 5's #1), which stops the run per Hard stops. This loop merges
-  unattended and `playbooks/verify.md` cannot prove a deletion was safe, so the one
-  class of fix `git revert` cannot undo is the one class a human decides.
+  job.
+
+  Park it `parked(authority)`, with the three fields the ledger requires: gap
+  `authority`; evidence, exactly what the fix would destroy; unpark condition, a
+  human's explicit go-ahead for that specific deletion. Until then the entry is not in
+  the queue, whatever its attempts count says.
+
+  The attempts count depends on how you got here. At **step 2** nothing has been built
+  yet — no worktree, no attempt — so record `attempts: 0/3`, and note that this is a
+  policy park, not an untouched budget for a later run to spend. Arriving from a
+  **step 5 guard FAIL**, a worktree and real attempts exist: leave the count as it
+  stands rather than resetting it, and revert the worktree as the failure path does —
+  unless this is the baseline finding, whose worktree that path deliberately keeps.
+
+  Commit the ledger on the base branch before moving on: this rule can exit the pass
+  before step 8, which would otherwise be what commits it, and an uncommitted ruling
+  does not survive a checkout. Then move to the next finding and the run continues —
+  unless this is the baseline finding (readiness step 5's #1), which stops the run per
+  Hard stops. This loop merges unattended and `playbooks/verify.md` cannot prove a
+  deletion was safe, so the one class of fix `git revert` cannot undo is the one class
+  a human decides.
 - **Docs travel with the change.** Update stale comments, docstrings, and docs that
   reference the changed behavior in the same change, per finding — never deferred to
   a cleanup pass.
