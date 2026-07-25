@@ -38,6 +38,10 @@ Smallest intervention first:
 - Never delete input validation or sanitization at trust boundaries (API inputs, file
   parsing, deserialization) even if only one caller currently exists — the boundary is
   the requirement, not the caller count.
+- Never delete anything backing persisted data — a column, table, migration, or
+  serialized field — on a zero-reference argument. Rows outlive the code that reads
+  them, and a dropped column is the one fix `git revert` cannot undo. Reversibility,
+  not caller count, is the test.
 - Never delete calibration knobs, tunable thresholds, or config for hardware/sensor
   interfaces even if only one value is set today — hardware variance across units/deploys
   is a real, current requirement, just not one visible in the codebase.

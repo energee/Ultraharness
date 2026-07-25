@@ -131,6 +131,20 @@ Two standing rules shape what counts as an improvement:
   artifacts that no longer earn their maintenance cost — including files this
   harness itself seeded — is a first-class fix, ranked by the same
   severity/radius/effort rules as additions.
+  - **Except at a boundary.** Guard precedence (the preamble of
+    `<target>/.agents/principles.md`) binds this rule: a guard is not dead because
+    nothing in the tree calls it. Framework-dispatched guards — decorators, route
+    registrations, middleware, lifecycle hooks — have zero in-tree callers by
+    construction. Removing one requires showing the boundary itself is gone.
+- **Irreversible fixes are the human's call.** If the smallest intervention that owns
+  the problem would destroy persisted data (dropping a column, table, migration, or
+  serialized field) or remove a guard, do not attempt it. Set the entry to
+  `parked(authority)` with `attempts: 0/3` and a ruling naming exactly what would be
+  destroyed — that is a policy park, not an exhausted budget, and what the fix would
+  destroy *is* the ruling's evidence. Then move to the next finding; the run
+  continues. This loop merges unattended and `playbooks/verify.md` cannot prove a
+  deletion was safe, so the one class of fix `git revert` cannot undo is the one class
+  a human decides.
 - **Docs travel with the change.** Update stale comments, docstrings, and docs that
   reference the changed behavior in the same change, per finding — never deferred to
   a cleanup pass.
@@ -308,6 +322,7 @@ failed run — retry before concluding anything about capability.
 | --- | --- |
 | "The baseline is only a little red." | The gate holds. Red baseline = finding #1, fixed first. Nothing else starts before it. |
 | "The suite is still red, so I'll open a fresh red-baseline finding." | One per target, ever. A parked `red-baseline` is the hard stop, not a new entry with a new 0/3 budget. |
+| "Nothing references this validator, so it is dead code." | Framework-dispatched guards never have in-tree callers. Removal at a boundary needs the boundary gone, not the symbol uncalled. |
 | "I'll batch five findings in one worktree." | One finding, one worktree, one verify. Batching makes failures unattributable and reverts impossible. |
 | "De-sloppify is overhead on a small diff." | It runs. On a small diff it's cheap; on any diff it's where the slop hides. |
 | "I'm close — one more attempt past 3 will crack it." | Park it with a gap ruling. The 4th attempt is what the next run, with fresh context, is for. |

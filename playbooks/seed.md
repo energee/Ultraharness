@@ -123,6 +123,11 @@ After writing, search `<target>/.agents/` for the string `{{` — it must not ap
   content: leave its recorded values alone even though they differ from the
   template's placeholder. Resetting a recorded base branch would send a resumed run
   merging into the wrong branch.
+- A whole section the template has and the target's copy lacks is **missing, not
+  deleted** — add it. "Update only stale lines" governs lines the target already has;
+  it would otherwise freeze every repo seeded before a template grew a section, which
+  is exactly the repo that needs the new content. Harness-owned sections are the ones
+  the template defines; anything else in the file is the user's and stays untouched.
 - If a file is missing, create it from the template as above.
 
 ### 5. Adapter files at the target root
