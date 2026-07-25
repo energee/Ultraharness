@@ -12,20 +12,24 @@ does not use those words is not defective.
 
 ## Gate — does this lens apply to this repo?
 
-Run both, from the target's root:
+`scripts/audit-checks.sh` decides this and prints the answer. Read its `gates:` line:
 
 ```
-git ls-files | grep -v '^\.agents/' | grep -Ei '\.(jsx|tsx|vue|svelte)$'
-git ls-files | grep -v '^\.agents/' | grep -Ei '(^|/)components?/' && git grep -lE "from ['\"](react|vue|svelte|preact|solid-js|@angular/core)" -- . ':(exclude).agents/'
+gates: atomic FIRED (144 hits; evidence: src/components/Button.tsx, src/components/Card.tsx, src/app/page.tsx)
+gates: atomic not-fired
 ```
 
-Both commands exclude `.agents/`: the harness's own seeded files are not the target's
-code, and counting them would make a re-seed fire gates the repo itself never fired.
+The patterns live in the script, in one place, so they cannot drift from the report the
+playbooks already quote as fact — and so the same repo gates the same way on every
+machine. The script fires on component-UI file extensions (`.jsx`, `.tsx`, `.vue`,
+`.svelte`), or on a components directory *and* a framework import together; either half
+of that second condition alone is not enough. `.agents/` is excluded, because the
+harness's own seeded files are not the target's code.
 
-**Applies** if the first command prints at least one path, or if both halves of the
-second print at least one path each — a components directory *and* a framework import;
-either alone is not enough. If neither fires, this lens does not apply and is not
-copied.
+**Applies** if the line reads `FIRED` *and* you open one cited path and confirm it is a
+real component rather than a stray `.tsx` in a scripts directory. That confirmation is
+the one judgement the script cannot make. If the line reads `not-fired`, or you cannot
+confirm a hit, this lens does not apply and is not copied.
 
 ## How to spot it
 

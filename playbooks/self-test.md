@@ -45,9 +45,10 @@ Create a fresh directory in a temp dir and `git init` it. It must have, at minim
 - **No lens gate may fire on it.** This fixture is the no-fire case: keep it free of
   retry/queue/webhook/cron/migration/deploy constructs and of component-UI files
   (`.jsx`, `.tsx`, `.vue`, `.svelte`, a `components/` directory with a framework
-  import). Run both lenses' gate commands against it before seeding and confirm each
-  comes back empty — if one fires, adjust the fixture, because step 3 asserts a
-  no-lens footprint and a fixture that quietly fires a gate would mask a real defect.
+  import). Run `bash scripts/audit-checks.sh <fixture>` before seeding and confirm both
+  its `gates:` lines read `not-fired` — if one fires, adjust the fixture, because step 3
+  asserts a no-lens footprint and a fixture that quietly fires a gate would mask a real
+  defect.
 
 Commit everything on the fixture's current branch, so seeding starts from a clean
 tree. Record the fixture path; every command below runs against it.
@@ -126,6 +127,11 @@ Build a second fixture, `<fixture2>`, in its own temp dir: same minimum as step 
 gate and nothing that fires the atomic gate — e.g. a queue consumer that handles a
 message and inserts a row, with a retry wrapper around it, and no component-UI files.
 Commit it. Run `playbooks/seed.md` against it as written, then assert:
+
+- The script said so before the agent did: the run's `audit-checks.sh` report reads
+  `gates: idempotency FIRED` naming a real path, and `gates: atomic not-fired`. This is
+  the assertion that separates "the gate discriminated" from "the agent guessed
+  correctly" — the seeded footprint below is only trustworthy if it traces to this line.
 
 - `<fixture2>/.agents/lenses/idempotency.md` exists and is byte-identical to
   `<harness>/templates/agents-dir/lenses/idempotency.md`.

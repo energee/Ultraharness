@@ -37,8 +37,8 @@ what is missing.
 ### 1. Gather facts
 
 Run `bash scripts/audit-checks.sh <target>` from the harness repo root. Keep the full
-output — you will use its `detected:`, `commands:`, `git:`, and `teachability:` lines
-below. Note: its `commands:` line is *discovered, not run* — treat those as
+output — you will use its `detected:`, `commands:`, `git:`, `teachability:`, and
+`gates:` lines below. Note: its `commands:` line is *discovered, not run* — treat those as
 candidates, not verified answers.
 
 ### 2. Discover and verify build/test/typecheck commands
@@ -165,21 +165,35 @@ resolved there (filled if a gate fired, deleted with its section if none did).
 
 ### 4a. Evaluate the lens gates
 
-The four rubrics in `principles.md` are universal. Lenses are not: each one applies
-only to repos that have the thing it judges, and each states its own **Gate** — an
-observable, greppable condition. Read every file in `<harness>/lenses/` and run that
-file's gate commands against `<target>`, from the target's root, exactly as written.
+The four rubrics in `principles.md` are universal. Lenses are not: each one applies only
+to repos that have the thing it judges. **The script decides which.** Step 1's report
+ends with one `gates:` line per lens:
 
-A gate fires only on its stated result *and* your confirmation from reading one hit —
-a word matched in prose, a changelog, or a lockfile is not evidence. Record, for each
-lens, the command output you based the decision on; a gate decided from memory of the
-repo is not a gate.
+```
+gates: atomic not-fired
+gates: idempotency FIRED (3 hits; evidence: workers/consumer.js, migrations/003_jobs.sql, deploy/release.sh)
+```
 
-Gates judge the target's own code, so the footprint rule in `<harness>/AGENTS.md`
-applies here too: each gate command already carries the exclusion, and a hit inside
-the footprint is not evidence. This matters most on a re-seed — the seeded files
-contain words like "retry" in their own prose, and a gate that counted them would fire
-on every previously-seeded repo and stop discriminating.
+Read those lines. Do not re-derive them by running greps of your own: the patterns live
+in `scripts/audit-checks.sh` so that one repo gates the same way on every machine and in
+every session, and a hand-run grep is exactly the variance that removes. If step 1's
+report has no `gates:` lines, the script is older than this playbook — say so and stop,
+rather than falling back to judgement.
+
+A `FIRED` line is necessary, not sufficient. Open **one** cited path and confirm it is a
+real construct — a retry wrapper, a queue registration, an actual component. `grep`
+cannot tell a retry wrapper from a variable named `retryCount` in a comment, and that
+one confirmation is the whole of the judgement left to you. Record which path you
+opened. A gate confirmed from memory of the repo is not confirmed.
+
+If you cannot confirm any cited hit, the gate has **not** fired. Copy nothing and say so
+— the same default-deny as a `not-fired` line, so an ambiguous repo resolves the same
+way every time instead of resolving by mood.
+
+The footprint rule in `<harness>/AGENTS.md` is already enforced upstream: the script
+excludes `.agents/`, `CHANGELOG`, `docs/`, and documentation extensions before matching,
+so a re-seeded repo cannot fire a gate on the harness's own prose about retries. You do
+not need to re-check that, and you must not undo it by grepping around it.
 
 For each lens whose gate **fires**: copy its condensed counterpart from
 `<harness>/templates/agents-dir/lenses/<name>.md` into `<target>/.agents/lenses/`
@@ -195,8 +209,9 @@ carries zero added lines from this step, which is the point of gating.
 
 **Idempotency — on a re-seed:**
 
-- Re-evaluate every gate against the target as it is now. A repo that has since gained
-  a job queue gains the idempotency lens on this run.
+- Re-read the `gates:` lines from this run's report — not the last run's decision, and
+  not the lens files present in `.agents/`. A repo that has since gained a job queue
+  gains the idempotency lens on this run.
 - A lens already present whose gate no longer fires is **left in place, not deleted**.
   Note it in the report as a candidate for removal; whether a lens stops applying is
   the user's call, not yours. Leave its `{{LENSES}}`-derived line in `AGENTS.md` too,
@@ -264,8 +279,9 @@ touch a file just to have something to commit.
   `.agents/` layout from memory. A full-form lens with no condensed counterpart (or
   the reverse) is this same stop — report the mismatch rather than authoring the
   missing half here.
-- **A lens gate cannot be decided**: if the gate command runs but you cannot confirm a
-  hit is a real construct rather than prose, the gate has not fired. Copy nothing,
+- **A lens gate cannot be decided**: if the `gates:` line reads `FIRED` but you cannot
+  confirm a cited hit is a real construct rather than prose, the gate has not fired.
+  Copy nothing,
   and say in the report which hit you could not confirm. An undecidable gate is a
   no-fire, never a fire "to be safe" — a lens that ships on ambiguity is not gated.
 - **`.agents/` is gitignored in the target** (probe item 6): stop and report the

@@ -135,8 +135,19 @@ how to spot it, how to fix it (smallest intervention first), and — just as imp
 when **not** to apply it, so deliberate choices don't get flagged as defects.
 
 **Lenses** are conditional rubrics for things not every repo has. Each adds one
-section the four rubrics don't have: a **gate**, a greppable condition run against your
-repo at seed time that decides whether the lens applies at all.
+section the four rubrics don't have: a **gate**, a condition evaluated against your repo
+at seed time that decides whether the lens applies at all. Gates are decided by
+`scripts/audit-checks.sh`, not by the agent — it prints one line per lens, and the same
+repo therefore gates the same way on every machine and in every session:
+
+```
+gates: atomic not-fired
+gates: idempotency FIRED (3 hits; evidence: workers/consumer.js, migrations/003_jobs.sql, deploy/release.sh)
+```
+
+The one judgement left to the agent is opening a cited path to confirm it is a real
+construct rather than the word "retry" in a comment. If it can't confirm, the gate did
+not fire.
 
 | Lens | Gate fires when the repo has | Catches |
 | --- | --- | --- |
@@ -151,7 +162,9 @@ that is present applies — the audit does not re-litigate the gate.
 
 Lens findings put the lens name in the principle slot: `[idempotency/high]`,
 `[atomic/med]`. To add a lens, write it in `lenses/` with the same sections as a rubric
-plus a Gate, and its condensed twin in `templates/agents-dir/lenses/`. Write the
+plus a Gate, its condensed twin in `templates/agents-dir/lenses/`, and its gate patterns
+in `scripts/audit-checks.sh` — deliberately three files, because a config format for two
+entries is the kind of thing this repo exists to flag in other people's code. Write the
 self-test's fire/no-fire assertions (step 5a) **before** the lens itself, and watch
 them fail: a gate is only proven by a fixture it fires on and a fixture it withholds
 from, and neither exists until you build it.

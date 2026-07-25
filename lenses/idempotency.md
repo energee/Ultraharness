@@ -12,22 +12,26 @@ assumes it runs exactly once.
 
 ## Gate — does this lens apply to this repo?
 
-Run both, from the target's root:
+`scripts/audit-checks.sh` decides this and prints the answer. Read its `gates:` line:
 
 ```
-git grep -lIEi 'retry|retries|backoff|idempotenc|celery|sidekiq|bullmq|resque|kafka|sqs|pubsub|amqp|rabbit|webhook|cron|scheduler' -- . ':(exclude).agents/'
-git ls-files | grep -v '^\.agents/' | grep -Ei '(^|/)(migrations?|migrate|deploy|infra|terraform)(/|$)|\.sql$'
+gates: idempotency FIRED (3 hits; evidence: workers/consumer.js, migrations/003_jobs.sql, deploy/release.sh)
+gates: idempotency not-fired
 ```
 
-Both commands exclude `.agents/` deliberately. The harness's own seeded files use
-words like "retry" in their prose; without the exclusion a re-seed fires this gate on
-every repo that has already been seeded, and the gate stops gating.
+The patterns live in the script, in one place, so they cannot drift from the report the
+playbooks already quote as fact — and so the same repo gates the same way on every
+machine. The script matches retry/queue/scheduler/webhook vocabulary in file *contents*,
+plus migration/deploy/infra paths, over authored code only: `.agents/`, `CHANGELOG`,
+`docs/`, and documentation extensions are excluded, because the word "retry" in prose or
+a lockfile is not a construct.
 
-**Applies** if either command prints at least one path *and* reading one of those hits
-confirms a real construct — a retry wrapper, a queue/scheduler registration, a
-migration or backfill, a webhook/event handler, or a deploy/infra script. A match on
-the word "retry" in prose, a changelog, or a dependency lockfile does not fire the
-gate. If neither command prints a path, this lens does not apply and is not copied.
+**Applies** if the line reads `FIRED` *and* you open one cited path and confirm a real
+construct — a retry wrapper, a queue/scheduler registration, a migration or backfill, a
+webhook/event handler, or a deploy/infra script. That confirmation is the one judgement
+the script cannot make: `grep` cannot tell a retry wrapper from a variable named
+`retryCount` in a comment. If the line reads `not-fired`, or you cannot confirm a hit,
+this lens does not apply and is not copied.
 
 ## How to spot it
 
