@@ -65,6 +65,11 @@ verifying the test command by running it. Then assert the exact footprint:
   has no `## Lenses` section. Zero added lines in the common case is this design's own
   claim; this is where it is checked.
 - No placeholders survive: searching `<fixture>/.agents/` for `{{` returns nothing.
+- Both stamps landed and resolve: `conventions.md`'s `recorded-at` and `AGENTS.md`'s
+  `Verified at` each name a commit `git -C <fixture> cat-file -e <stamp>^{commit}`
+  accepts, and it is the commit that was HEAD when seeding started — not a later one.
+  A stamp naming the seed commit itself would claim the observations were made against
+  a tree that did not exist when they were made.
 - `<fixture>/AGENTS.md` and `<fixture>/CLAUDE.md` exist and each carry one pointer
   block.
 - `<fixture>/.gitignore` covers `.agents/worktrees/`.
@@ -227,6 +232,68 @@ Note what the run tells you about *where* the constraint lives. If the fresh con
 complied because the workflow body already states the rule, the row is a restatement,
 and restatements are the first thing to cut when a table gets long.
 
+### 5d. Make the record lie, and check the audit notices
+
+A staleness check that has never caught anything is not a check. Break the record on
+purpose and confirm the audit reports it.
+
+In `<fixture>`, make two changes and commit them, leaving the seeded `.agents/`
+untouched:
+
+1. Move or rename a file that `conventions.md` cites by name.
+2. Change the test command in `package.json` (or the ecosystem equivalent) so the one
+   recorded in `.agents/AGENTS.md` no longer runs.
+
+Then run `playbooks/audit.md` again and assert:
+
+- It emits a `staleness` finding for the void citation and one for the dead test
+  command, both in the standard format, both ranked in the one list.
+- The dead command is graded **high** — it blocks a contributor and misleads every
+  later verify — and the void citation is not graded high by reflex.
+- It did **not** rewrite `.agents/` to make the findings go away. The audit reports;
+  re-seeding fixes.
+- Claims whose cited paths did not move are reported as still standing rather than
+  re-litigated. The stamp exists to make this check cheap; an audit that re-reads
+  everything regardless has not used it.
+
+Then re-seed and assert the corrections landed and the stamps advanced **only** on the
+files that changed. A stamp advanced without re-checking is the failure this step
+exists to catch — it launders old prose as freshly verified — and if a third audit
+still reports the same staleness findings, the re-seed did not do its job.
+
+### 5e. Hand off to a fresh context
+
+`improve.md` claims a run can be picked up cold from the ledger alone. That claim is
+the whole context-management story, and it is worth nothing untested. Test it by
+performing the handoff.
+
+Run a second improve pass on `<fixture3>` far enough to complete one finding — through
+step 8, so the tree is committed and the ledger says `done` — with at least one entry
+still `open`. Then stop, and hand the run to a **fresh context** with exactly the line
+`improve.md` step 8 specifies, and nothing else:
+
+```
+Read <fixture3>/.agents/AGENTS.md and continue the improve run.
+```
+
+No summary, no explanation of what happened, no pointer to the finding. If you add
+context to the prompt, you have tested your own summary rather than the ledger, which
+is the one thing this step exists to rule out.
+
+Assert:
+
+- The fresh context picks up the remaining `open` entry without being told it exists,
+  works it to `done`, and leaves a clean tree.
+- It does not redo the finished finding. Re-executing completed work is the classic
+  cold-resume failure, and the ledger's `done` status is what should prevent it.
+- Its first report names what the ledger told it **and what it had to reconstruct**
+  (readiness item 3). Every reconstructed fact is a defect in the ledger format: fix
+  the format under step 7, not the prompt.
+
+Do the same from a mid-pass death if you want the harder case: kill the run with a
+worktree left dirty, then hand off. That exercises step 1's three worktree states,
+which nothing else here covers.
+
 ### 6. Delete the fixture
 
 Remove both temp dirs — `<fixture>` and `<fixture2>`. Leaving one behind means the
@@ -249,11 +316,14 @@ Docs travel with the fix: if the behavior you changed is described in `README.md
 This playbook exercises `seed.md` and `audit.md` end to end, and **one** pass of
 `improve.md`/`verify.md` (step 5b), against real fixtures.
 
-Still uncovered, and so not evidence about anything: the **resume** path (step 1's
-three worktree states after a session dies mid-pass), the **park** path (3 failed
+Step 5e covers the clean handoff between passes; its optional mid-pass variant is the
+only coverage of step 1's three worktree states, and it is optional, so treat the
+**resume** path as covered only if you ran it.
+
+Still uncovered, and so not evidence about anything: the **park** path (3 failed
 attempts, gap ruling, parked-baseline hard stop), the **testless** route through
 PASS (unverified-by-tests), the **authority envelope** (no fixture here tempts a run
-past it), and any run longer than one pass. A green self-test says a single pass works
+past it), and any run longer than two passes. A green self-test says a single pass works
 end to end; it says nothing about the loop across passes.
 
 Step 5c tests exactly **one** anti-rationalization row per run, and only when a fresh

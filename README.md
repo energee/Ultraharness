@@ -111,6 +111,21 @@ The **ledger** is the loop's memory. Each finding is one entry with a status (`o
 before/after evidence. A run killed mid-finding can be resumed cold by any agent from
 the ledger alone.
 
+That is also the answer to a long run outgrowing its context. State lives in files, not
+in the session, so a handoff is one fixed line — `Read <target>/.agents/AGENTS.md and
+continue the improve run.` — taken at a pass boundary, never mid-fix. There is
+deliberately no handoff summary: a summary is written by the most depleted context in
+the run, from memory, while the ledger was written by a fresh one at each step. If that
+one line is not enough, the ledger is what gets fixed.
+
+**The record is checked, not trusted.** `conventions.md` and the commands block carry a
+`recorded-at` stamp — the commit they were observed at. Every claim cites a file, and
+nothing derivable from the code is recorded at all: a doc that restates the code is
+duplicated knowledge, and duplicated knowledge diverges. The audit re-checks each claim
+against the code it cites and reports drift as a `staleness` finding, so a seeded file
+that has quietly started lying gets ranked alongside everything else instead of being
+believed.
+
 ## Rubrics and lenses
 
 Four rubrics apply to every repo: **DRY**, **KISS**, **SOLID**, **YAGNI**. Each states
@@ -175,8 +190,10 @@ Run `bash scripts/test.sh` from this repo's root — the bash tests for
 `scripts/audit-checks.sh`. Every assertion prints `PASS` and the run exits 0.
 
 For the end-to-end check, point an agent at `playbooks/self-test.md`. It seeds,
-re-seeds, audits, proves the lens gates both fire *and* withhold, and runs one full
-improve/verify pass — all against throwaway fixtures, then deletes them.
+re-seeds, audits, proves the lens gates both fire *and* withhold, runs a full
+improve/verify pass, breaks the seeded record on purpose to confirm the staleness check
+catches it, and hands a live run to a fresh context to prove the ledger really is
+enough to resume from — all against throwaway fixtures, then deletes them.
 
 It also ablates one anti-rationalization row per run: remove the row, hand the modified
 playbook to a fresh context, and see whether the excuse shows up. A rule no agent ever

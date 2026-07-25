@@ -10,6 +10,9 @@ Read this file first; follow the pointers below only when you need them.
 - Build: `{{BUILD_CMD}}`
 - Test: `{{TEST_CMD}}`
 - Typecheck: `{{TYPECHECK_CMD}}`
+- Verified at: `{{RECORDED_AT}}` — the commit these commands were last *run* against.
+  A command recorded here ran at that revision; it is not a promise about now. If one
+  fails to run today, that is a finding, not a reason to guess a replacement.
 
 ## Conventions
 
