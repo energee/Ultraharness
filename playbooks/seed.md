@@ -108,7 +108,11 @@ After writing, search `<target>/.agents/` for the string `{{` — it must not ap
   that no longer verifies, a convention contradicted by current code).
 - Never touch user-added content: extra sections, ledger entries, learnings, and
   hand-written notes stay exactly as they are. `ledger.md` and `learnings.md` are
-  append-only history — never rewrite or prune their entries here.
+  append-only history — never rewrite or prune their entries here. The ledger's
+  `Run state` block is live state owned by `playbooks/improve.md`, not template
+  content: leave its recorded values alone even though they differ from the
+  template's placeholder. Resetting a recorded base branch would send a resumed run
+  merging into the wrong branch.
 - If a file is missing, create it from the template as above.
 
 ### 5. Adapter files at the target root

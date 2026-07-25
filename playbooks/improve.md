@@ -13,19 +13,28 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
 1. You have a target repo path. If none was given, ask for one.
 2. The target is seeded: `<target>/.agents/` exists with `ledger.md`,
    `principles.md`, and `conventions.md`. If not, run `playbooks/seed.md` first.
-3. **Base branch.** Read the ledger's `Run state` block first. If it already records
-   a `- base branch:` for entries you are resuming (step 4), that recorded branch is
-   this run's base branch — a resumed run must merge back into the branch its
-   worktrees were cut from, not into whatever happens to be checked out now. If it
-   disagrees with the target's current checkout, stop and report both; do not guess
-   which is right. Otherwise — a fresh run, or no recorded value — the base branch is
-   the branch the target has checked out at run start; write it to the ledger's
-   `Run state` block as `- base branch: <name>` before starting. Either way, every
-   branch below is cut from it and merged back into it. Never substitute
-   `main`/`master` for it, and never switch the target's checkout.
-4. Read the ledger top to bottom. Entries with status `in-progress` mean a previous
+3. Read the ledger top to bottom. Entries with status `in-progress` mean a previous
    run died mid-finding — resume those first (see Workflow step 1). Never start
-   fresh work while an `in-progress` entry sits unexamined.
+   fresh work while an `in-progress` entry sits unexamined. This read also tells
+   item 4 whether this is a resumed run.
+4. **Base branch.** Read the ledger's `Run state` block. A `- base branch:` still
+   holding the seeded placeholder — any angle-bracket `<...>` value — is not a
+   recorded value; treat it as absent. Then:
+   - **Resumed run** (item 3 found `in-progress` entries) *and* a real recorded
+     branch: that recorded branch is this run's base branch — a resumed run must
+     merge back into the branch its worktrees were cut from, not into whatever
+     happens to be checked out now. Then confirm the target is still checked out on
+     it; if not, stop and report both branches. Merging back requires that checkout
+     and this playbook never switches it, so a disagreement is unresolvable here —
+     do not guess which is right.
+   - **Otherwise** — a fresh run, or no recorded value — the base branch is the
+     branch the target has checked out at run start; write it to the ledger's
+     `Run state` block as `- base branch: <name>` before starting. A ledger seeded
+     before that block existed has no `Run state` section: add one, matching the
+     template's, directly above `## Entry format`.
+
+   Either way, every branch below is cut from it and merged back into it. Never
+   substitute `main`/`master` for it, and never switch the target's checkout.
 5. **Clean-baseline gate.** Run the target's test suite (the test command from
    `<target>/.agents/AGENTS.md`). A red baseline does not block the run; it becomes
    finding #1, ranked above everything else, and is fixed first so every later
@@ -48,10 +57,14 @@ Loop the following. One pass = one finding.
 - If the ledger has `open` or `in-progress` entries, that is your queue — do not
   re-audit first. An `in-progress` entry is resumed at whatever step its worktree
   and attempts count indicate: if its worktree
-  `<target>/.agents/worktrees/<finding-slug>/` exists, first check whether its
-  branch is already merged into the base branch (a run that died between merge and
-  cleanup) — if merged, jump to step 7's ledger
-  update; otherwise inspect the diff there and continue from fix or verify. If no
+  `<target>/.agents/worktrees/<finding-slug>/` exists, first check whether the fix
+  already landed (a run that died between merge and cleanup): it did only if the
+  branch has at least one commit of its own AND that commit is merged into the base
+  branch. A branch still sitting at the base commit reports as "merged" while having
+  landed nothing — that is a pass that died before committing, not a merged one, and
+  its work is the uncommitted diff in the worktree. If the fix truly landed, jump to
+  step 7's ledger update; otherwise inspect the worktree's diff (`git -C <worktree>
+  add -AN` first, so new files show) and continue from fix or verify. If no
   worktree exists, treat it as `open` and restart the pass (increment nothing —
   attempts count only completed fix attempts).
 - If the ledger has no open entries (first run, or queue drained), run
@@ -79,7 +92,7 @@ Two standing rules shape what counts as an improvement:
 
 Create a worktree for this one finding at
 `<target>/.agents/worktrees/<finding-slug>/` on a new branch
-`harness/<finding-slug>`, branched from the run's base branch (readiness step 3).
+`harness/<finding-slug>`, branched from the run's base branch (readiness step 4).
 One finding, one worktree, one branch. All fix work happens inside it.
 
 ### 4. Fix
@@ -110,7 +123,10 @@ diff line by line and simplify. If de-sloppifying changed anything, run verify a
 
 ### 7. Merge back
 
-Merge the branch into the run's base branch. If the merge conflicts with work from an
+Commit the fix on the finding's branch first — an uncommitted worktree has nothing to
+merge — with no Co-Authored-By line. Then merge the branch into the run's base branch,
+which requires the target checked out on it (readiness step 4 guaranteed that). If the
+merge conflicts with work from an
 earlier pass, resolve it now, re-verify, then merge — never leave a finding stranded
 on its branch. Then, BEFORE deleting the worktree, update the ledger entry:
 `status: done`, final `attempts`, and `delta` with before/after evidence (e.g.
@@ -122,17 +138,23 @@ says `done`, delete the worktree and the branch.
 
 ### 8. Checkpoint
 
-- Make a checkpoint commit in the target (the merged fix plus the ledger update).
-  No Co-Authored-By lines.
+Write every file this pass owes before committing; the commit comes last, so nothing
+this pass wrote is left dirtying the target.
+
 - If the fix added or changed the target's build, test, or typecheck command —
   finding #1 on a testless repo is exactly this case — update that entry in
   `<target>/.agents/AGENTS.md` in this same pass, verified by running it. Leaving a
   stale `none verified` there makes every later `playbooks/verify.md` pass skip a
-  suite that now exists and return PASS (unverified-by-tests) against real tests.
+  suite that now exists and return PASS (unverified-by-tests) against real tests. If
+  the new command does not run when you verify it, do not record it: fix it or record
+  the honest `none verified`, and raise the discrepancy as a new `open` finding.
 - If this pass taught something a future session in this repo would need — a
   convention the fix had to follow, a trap that cost an attempt — append one line to
   `<target>/.agents/learnings.md` in that file's format, incrementing `seen` on an
   existing line rather than adding a duplicate. Nothing learned, nothing written.
+- Make a checkpoint commit in the target covering everything this pass produced: the
+  merged fix, the ledger update, and any `AGENTS.md` or `learnings.md` edit above.
+  No Co-Authored-By lines. Then confirm the target's working tree is clean.
 - Report scope remaining: findings done this run, findings still open, envelope
   budget left. On multi-hour runs, pause here for a user checkpoint between phases
   before continuing.

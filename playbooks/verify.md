@@ -16,7 +16,10 @@ typecheck commands are the verified ones recorded in `<target>/.agents/AGENTS.md
 2. That change has a diff: run `git -C <target> status --porcelain` and
    `git -C <target> diff HEAD` (or diff against the branch base if the change is
    already committed) and confirm it is non-empty. No diff, nothing to verify —
-   stop and report that.
+   stop and report that. If `status` lists untracked files (`??`), they are part of
+   the change and `git diff HEAD` omits them entirely: mark them intent-to-add
+   (`git -C <target> add -AN`) and re-run the diff, so a new file that carries the
+   whole fix cannot pass step 3 unread.
 3. `<target>/.agents/AGENTS.md` exists and names the test command. If it records
    `none` or `none verified` for tests — the two mean the same thing here, no suite
    to run — note that up front: the verdict below must be
