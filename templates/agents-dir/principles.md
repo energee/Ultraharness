@@ -15,13 +15,14 @@ Severity anchors — grade against these, not against how expensive the fix look
 Where two anchors both fit, the higher one wins: a doc naming a command that does not
 exist is a wrong fact *and* blocks a contributor from testing — grade it high.
 
-## Guard precedence — governs all four rubrics below
+## Guard precedence — governs every rubric and lens
 
 A **guard** is code whose job is to survive something going wrong: input validation or
 sanitization, an authorization check, an error branch that changes control flow on
 failure, a timeout, a bound, a cleanup path, a transaction wrapper, a version pin.
 
-Where a rubric below would flag a guard *for removal*, it stays silent. "It has one
+Where a rubric below — or a lens in `lenses/` — would flag a guard *for removal*, it
+stays silent. "It has one
 caller", "it has no caller", "it adds a branch or nesting", and "it is a
 single-implementation indirection" are never sufficient reason to remove one — a
 guard invoked by a framework, a decorator, or a route registration has no in-tree

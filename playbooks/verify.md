@@ -67,6 +67,16 @@ subagent; summaries are claims, and this playbook trades only in evidence. While
 reading, check for: changes outside the claimed scope, leftover debug output,
 commented-out code, and any edit that weakens a test or assertion.
 
+**Prefer fresh eyes.** If your environment can start a fresh context — a subagent, a
+second session — hand it the diff and the one-sentence claim from probe item 1, and
+have it answer those same checks. Nothing else: not the plan, not your reasoning, not
+this conversation. Whoever wrote the change is its worst reader — they know what the
+code was *meant* to do and read that intent into hunks that do not contain it, which
+is the failure this gate exists to catch. Its answer does not replace your own read; a
+finding it raises that you missed is itself evidence about how carefully you read. If
+no fresh context is available, say so in the verdict and read it yourself — that is a
+weaker verification, and the verdict must not hide it.
+
 ### 4. Check the change against principles
 
 Read `<target>/.agents/principles.md` and hold the diff against it — especially
@@ -139,6 +149,7 @@ its own evidence — not something to slip into a verification pass.
 | "The diff is tiny — no need to run the whole suite" | Tiny diffs break distant tests all the time; size of diff is not size of blast radius. Run the full suite. |
 | "Tests were green two edits ago" | Two edits ago is a different codebase. Only output from a run after the final edit counts. |
 | "The subagent said it passed" | A subagent's report is a claim, not evidence. Re-run the commands and read the diff yourself. |
+| "I wrote it, so I already know what the diff says" | You know what you meant. The gate is about what the hunks contain. Hand it to a fresh context if you have one, and say in the verdict if you don't. |
 | "I'll skim the diff summary instead of the hunks" | Summaries hide the one hunk that matters. Read every hunk or the verdict is invalid. |
 | "No test suite here, so I'll just write PASS" | Write PASS (unverified-by-tests). A bare PASS claims evidence you do not have. |
 | "AGENTS.md records `none`, so there is nothing to run" | Check the diff first. If this change adds tests, the record is stale and this change is what made it stale — run the new suite and give a real verdict. |

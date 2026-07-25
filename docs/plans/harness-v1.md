@@ -2,6 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Note (2026-07-25):** `docs/specs/` and `docs/research/` are no longer tracked in
+> this repo — they are gitignored and local-only. References to them below are kept as
+> the historical record of what this plan was written against.
+
 **Goal:** Build the self-applying instruction repo described in `docs/specs/2026-07-24-harness-design.md`: front doors, principle rubrics, the `.agents/` template, four playbooks, and a thin deterministic audit script — then prove it by seeding a scratch repo and auditing the harness itself.
 
 **Architecture:** Everything is markdown routed from `AGENTS.md`, plus one bash script (`scripts/audit-checks.sh`) for deterministic audit facts and one bash test file. No runtime, no installer. Playbooks follow the spec's conventions: readiness probe first, stop conditions + ledger-on-failure, anti-rationalization table last, idempotent.
@@ -32,7 +36,7 @@
 - [ ] **Step 1: Write README.md** — the human front door. Sections:
   - One-paragraph pitch: point any coding agent at this repo to make any repo simpler, DRY-er, KISS, SOLID, YAGNI. No install.
   - **Quick start**: a table of copy-paste prompts, one row per action (Seed / Audit / Improve), each a single prompt string of the form:
-    `Read /path/to/harness/AGENTS.md, then run the <seed|audit|improve> playbook against my repo at <target-path>.`
+    `Read ~/harness/AGENTS.md, then run the <seed|audit|improve> playbook against my repo at <target-path>.`
     with a note that the same prompt works in Claude Code, Codex CLI, Cursor, Gemini CLI, OpenCode, etc.
   - **What gets left behind**: the `.agents/` footprint listing from the spec, verbatim file list with one-line purposes.
   - **How it works**: 5 lines — front door routes to playbooks; audit produces ranked findings + top-actions; improve loop runs audit→fix→verify→de-sloppify→checkpoint in worktrees under `.agents/worktrees/`; ledger survives session death.

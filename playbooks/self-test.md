@@ -42,6 +42,12 @@ Create a fresh directory in a temp dir and `git init` it. It must have, at minim
   so the audit has one real finding to catch. If the fixture is clean, step 5 proves
   nothing.
 - At least one file large enough to appear in the script's `largest files` list.
+- **No lens gate may fire on it.** This fixture is the no-fire case: keep it free of
+  retry/queue/webhook/cron/migration/deploy constructs and of component-UI files
+  (`.jsx`, `.tsx`, `.vue`, `.svelte`, a `components/` directory with a framework
+  import). Run both lenses' gate commands against it before seeding and confirm each
+  comes back empty — if one fires, adjust the fixture, because step 3 asserts a
+  no-lens footprint and a fixture that quietly fires a gate would mask a real defect.
 
 Commit everything on the fixture's current branch, so seeding starts from a clean
 tree. Record the fixture path; every command below runs against it.
@@ -52,7 +58,12 @@ Read `playbooks/seed.md` and run it against `<fixture>`, as written — includin
 verifying the test command by running it. Then assert the exact footprint:
 
 - `<fixture>/.agents/` contains exactly the five files `AGENTS.md`,
-  `conventions.md`, `principles.md`, `ledger.md`, `learnings.md`.
+  `conventions.md`, `principles.md`, `ledger.md`, `learnings.md` — and, because this
+  fixture fires no lens gate (step 2 built it that way), **no `lenses/` directory**.
+- The no-fire fixture pays nothing for the lens machinery:
+  `grep -ril lens <fixture>/.agents/` returns nothing, and `<fixture>/.agents/AGENTS.md`
+  has no `## Lenses` section. Zero added lines in the common case is this design's own
+  claim; this is where it is checked.
 - No placeholders survive: searching `<fixture>/.agents/` for `{{` returns nothing.
 - `<fixture>/AGENTS.md` and `<fixture>/CLAUDE.md` exist and each carry one pointer
   block.
@@ -99,10 +110,128 @@ Read `playbooks/audit.md` and run it against `<fixture>`, as written. Assert:
 - No finding covers the harness's own footprint — `.agents/` and the pointer blocks
   are quoted in the script report but never judged.
 
+### 5a. Prove the gates gate
+
+A gate that never withholds anything is not a gate. Steps 2-5 covered the no-fire
+case; this step covers the fire case, and both halves are needed — one fixture that
+fires a gate and one that does not.
+
+Build a second fixture, `<fixture2>`, in its own temp dir: same minimum as step 2
+(README, real test command, manifest), plus one construct that fires the idempotency
+gate and nothing that fires the atomic gate — e.g. a queue consumer that handles a
+message and inserts a row, with a retry wrapper around it, and no component-UI files.
+Commit it. Run `playbooks/seed.md` against it as written, then assert:
+
+- `<fixture2>/.agents/lenses/idempotency.md` exists and is byte-identical to
+  `<harness>/templates/agents-dir/lenses/idempotency.md`.
+- `<fixture2>/.agents/lenses/atomic-design.md` does **not** exist. This is the
+  assertion that makes the others mean something: the same run that copied one lens
+  withheld the other, on the same repo, from its gate alone.
+- `<fixture2>/.agents/AGENTS.md` has a `## Lenses` section naming `idempotency` and
+  the evidence that fired it, contains no `{{`, and does not name `atomic`.
+- `git -C <fixture2> ls-files .agents/lenses/` lists exactly the one lens file — a
+  lens seeded but untracked is not seeded, for the same reason step 3 checks tracking.
+- Re-running `seed.md` against `<fixture2>` unchanged copies nothing new and leaves
+  `git -C <fixture2> status --porcelain` empty, exactly as step 4 requires.
+
+Then run `playbooks/audit.md` against `<fixture2>` and assert that the lens is applied
+without being re-judged: the audit's report names `lenses/idempotency.md` among the
+rubrics it read. If it emits an idempotency finding, that finding uses `idempotency`
+in the principle slot and is ranked in the one list with everything else. An audit
+that finds nothing idempotency-related is not a failure — the fixture is small — but
+an audit that never read the lens is.
+
+Delete `<fixture2>` when done, per step 6.
+
+### 5b. Run one improve pass end to end
+
+`improve.md` and `verify.md` are the loop that actually changes a repo, and prose
+that has never been executed is unverified. Run exactly one pass.
+
+Build a third fixture, `<fixture3>`: a manifest and a **real test command whose suite
+asserts something and is green at run start** (a testless fixture would route every
+verdict to PASS (unverified-by-tests) and prove nothing about the gate), plus one
+planted finding a minimal fix can close — the duplicated block from step 2 is enough.
+Commit it, seed it, and audit it, so the ledger carries a real queue.
+
+Then run `playbooks/improve.md` against it with the safety envelope overridden to
+**1 finding**, and assert, in order:
+
+- **Baseline gate**: the run recorded the pre-run suite result before touching
+  anything, and the ledger's `Run state` block records `- base branch: <the branch the
+  fixture had checked out>` — not `main` unless that is what was checked out.
+- **Isolation**: a worktree exists at `<fixture3>/.agents/worktrees/<slug>/` on branch
+  `harness/<slug>`, cut from the base branch, while the pass is in flight, and the
+  entry reads `status: in-progress` before any fix is written.
+- **Verify ran for real**: the pass's verdict is one of the three verdicts, and it
+  quotes fresh command output. A verdict with no quoted output is a defect in
+  `verify.md`, not a formatting nit.
+- **Merge back**: the base branch carries a commit whose first line begins exactly
+  `fix(<slug>): `, with no Co-Authored-By line, and the fix is present in the
+  fixture's working tree.
+- **Ledger before deletion**: the entry reads `status: done` with a `delta` quoting
+  real before/after evidence, and only then are the worktree and branch gone —
+  `git -C <fixture3> worktree list` shows one entry and `git -C <fixture3> branch
+  --list 'harness/*'` is empty.
+- **Checkpoint**: `git -C <fixture3> status --porcelain` is empty — the ledger update
+  is committed, not left dirtying the target.
+
+Assert the negative too, the way step 5a does: the run stopped after one finding
+because the envelope said 1, reported scope remaining, and left the still-`open`
+entries open. An envelope that never stops a run is not an envelope.
+
+### 5c. Ablate one anti-rationalization table
+
+Every playbook ends in a table of excuses and rebuttals. Each row claims an agent
+would otherwise make that excuse — and an unfalsified claim is decoration. This step
+tests one row per self-test run, so the tables shrink toward what is load-bearing
+instead of growing forever.
+
+The run must be done by a **fresh context** — a subagent, a second session, an agent
+that has not read this playbook. You cannot ablate a table you have already read: you
+know the rebuttals, so your behaviour is evidence about your memory, not about the
+prose. If no fresh context is available, skip this step and say so in the report; a
+self-ablation reported as a result is worse than no result.
+
+Pick one row — rotate through them across runs, oldest-untested first, reading
+`<harness>/docs/ablations.md` to see which have been tested and when. That file is the
+record; without it "oldest-untested" is unanswerable and every run re-tests whatever
+row catches your eye. Then:
+
+1. Copy the playbook to a scratch file with **that one row removed**, everything else
+   intact.
+2. Give the fresh context the modified playbook and a fixture built so the excuse is
+   tempting: for "I'll batch five findings in one worktree", a queue with five cheap
+   related findings; for "no test suite here, so I'll just write PASS", a testless
+   repo with a clean diff.
+3. Record what it actually did, verbatim — not whether it "seemed to understand".
+
+Then judge:
+
+- **It made the excuse** → the row is load-bearing. Keep it, and note the observed
+  wording in the report; the row should quote what agents really say, not a
+  paraphrase of what you imagined.
+- **It did the right thing anyway** → the row is unsupported. Do not delete it on one
+  run — record the result and mark the row tested; two independent runs that both
+  decline the excuse are grounds for removing it. A table that only ever grows is how
+  playbooks become unreadable, and unreadable playbooks are skipped whole.
+- **It failed in some *other* way** → that is the more valuable finding. It is a real
+  observation about a real run, so step 7 applies: fix the smallest thing that
+  explains it, and consider whether that failure deserves a row.
+
+Append the result as one row in `<harness>/docs/ablations.md`, and report it. It does
+not go into the target, and it does not go into the playbook — except the row edit
+itself, once two runs justify one.
+
+Note what the run tells you about *where* the constraint lives. If the fresh context
+complied because the workflow body already states the rule, the row is a restatement,
+and restatements are the first thing to cut when a table gets long.
+
 ### 6. Delete the fixture
 
-Remove the temp dir. Leaving it behind means the next self-test silently runs against
-a pre-seeded repo and stops testing the seed path at all.
+Remove both temp dirs — `<fixture>` and `<fixture2>`. Leaving one behind means the
+next self-test silently runs against a pre-seeded repo and stops testing the seed path
+at all.
 
 ### 7. Fix what the run broke
 
@@ -117,11 +246,20 @@ Docs travel with the fix: if the behavior you changed is described in `README.md
 
 ## Not covered
 
-This playbook exercises `seed.md` and `audit.md` end to end against a real fixture.
-It does **not** run `improve.md` or `verify.md` — no fix loop, no worktree, no
-verdict is executed here, so nothing here is evidence about those two. A green
-self-test means the seed and audit paths work; it says nothing about the improve
-loop.
+This playbook exercises `seed.md` and `audit.md` end to end, and **one** pass of
+`improve.md`/`verify.md` (step 5b), against real fixtures.
+
+Still uncovered, and so not evidence about anything: the **resume** path (step 1's
+three worktree states after a session dies mid-pass), the **park** path (3 failed
+attempts, gap ruling, parked-baseline hard stop), the **testless** route through
+PASS (unverified-by-tests), the **authority envelope** (no fixture here tempts a run
+past it), and any run longer than one pass. A green self-test says a single pass works
+end to end; it says nothing about the loop across passes.
+
+Step 5c tests exactly **one** anti-rationalization row per run, and only when a fresh
+context is available. Every untested row is an unfalsified claim — the tables are the
+least-evidenced prose in this repo, and one row per run is a slow burn-down, not
+coverage.
 
 ## Stop conditions
 
@@ -134,7 +272,8 @@ loop.
   environment): stop and report it as a finding against that playbook. Do not
   improvise a substitute step and count the run as passing.
 - **The fixture cannot be created** (no temp dir, no git): stop at step 2. Never fall
-  back to seeding a real repo to keep the self-test moving.
+  back to seeding a real repo to keep the self-test moving. The same holds for
+  `<fixture2>` at step 5a.
 - **On any stop above** — record what stopped the self-test and what would unblock
   it in the ledger's `Run stop` format (see `<harness>/templates/agents-dir/ledger.md`): in
   `<fixture>/.agents/ledger.md` if the fixture got far enough to have one, otherwise
@@ -149,4 +288,6 @@ loop.
 | "The fixture is trivial, the audit finding it nothing is fine." | You planted the duplication precisely so there is a known answer. Missing it is a failed self-test. |
 | "I'll fix the fixture so the assertion passes." | The fixture is the ruler. Bending the ruler to fit the harness is falsifying the test — fix the harness. |
 | "This playbook edit reads better, I'll keep it even though nothing failed." | Every fix traces to an observation from this run. No observation, no edit. |
-| "I'll leave the temp dir; deleting it is cleanup nobody sees." | The next self-test would start pre-seeded and quietly skip the seed path. Delete it. |
+| "I'll leave the temp dir; deleting it is cleanup nobody sees." | The next self-test would start pre-seeded and quietly skip the seed path. Delete both of them. |
+| "I've read the table, but I'll run the ablation myself anyway — I'll be objective." | You cannot unread it. Your compliance measures your memory, not the prose. Fresh context or skip the step and say so. |
+| "Step 5a's second fixture is a lot of setup — the first one proves gating well enough." | The first proves nothing was copied. Only a fixture where one lens fires and another does not proves the gate discriminates rather than always declining. |
