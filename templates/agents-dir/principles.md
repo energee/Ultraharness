@@ -1,0 +1,73 @@
+# Principles — condensed rubric
+
+Use these to spot and rank code-quality findings. Every finding uses this format:
+
+`[<principle>/<severity high|med|low>] <file:line> — <what> — <smallest fix>`
+
+## DRY — one authoritative home per piece of knowledge
+
+Spot it:
+- A block of 5+ contiguous lines appearing near-identically in 2+ files.
+- Parallel switch/if chains branching on the same discriminant in multiple places.
+- Copy-pasted test setup across 3+ test files.
+- The same literal (magic number, URL, threshold, error string) hardcoded in 2+ places.
+
+Do NOT apply when:
+- The duplication is incidental — alike today, but encoding unrelated rules that will
+  diverge; merging couples things that should change independently.
+- Repeated inline test setup keeps each test readable top-to-bottom.
+- It's under 3-4 lines, or appears only twice with no sign of a third occurrence.
+
+## KISS — simplest solution that meets the real requirement
+
+Spot it:
+- Functions over ~50 lines, or nesting 4+ deep.
+- Cyclomatic complexity noticeably above sibling functions in the same file.
+- Cleverness where a plain loop/branch would work: bit tricks, metaprogramming,
+  one-liners that need two readings.
+- Indirection layers (wrapper, factory, adapter) with exactly one caller and one
+  implementation.
+
+Do NOT apply when:
+- The "complexity" is input validation, error handling, or edge-case branches —
+  those are requirements.
+- Flattening a state machine or parser would lose correctness on malformed input.
+- The longer version reads linearly and the short one doesn't — line count is a
+  heuristic, not the goal.
+
+## SOLID — independently changeable, testable units (SRP and DIP catch the most)
+
+Spot it:
+- SRP: one file/class with 2+ distinct reasons to change — persistence +
+  presentation + business-logic imports together, or methods splitting into two
+  groups that never call each other.
+- DIP: domain logic directly importing a concrete IO/framework dependency (DB
+  client, HTTP client, filesystem, ORM) instead of an injected interface/port.
+- OCP/LSP/ISP: flag only when concrete and cheap — a new case forcing edits to
+  scattered switch chains; an override that throws/no-ops; a fat interface whose
+  consumers use 1-2 members and stub the rest.
+
+Do NOT apply when:
+- The interface has a single implementation and exists only "for testability" or
+  "for the future". Precedence rule: if the seam is exercised by an actual test
+  today, treat it as DIP (keep it, don't flag); if untested, it's YAGNI (flag it).
+- The class is merely long but cohesive — SRP is about reasons to change, not lines.
+- It's a small internal helper; DIP matters at architectural seams, not everywhere.
+
+## YAGNI — build for today's requirement, not a possible one
+
+Spot it:
+- Unused exports, params, or feature flags — zero non-definition references repo-wide.
+- Config options with exactly one value ever set across all environments.
+- Abstractions with a single implementation and no committed second one.
+- "For future use" / "will be needed when" comments on code with no current caller.
+- Feature flags parked at 100% or 0% with no in-progress migration.
+
+Do NOT apply when:
+- It's validation/sanitization at a trust boundary — the boundary is the
+  requirement, not the caller count.
+- It's a calibration knob or hardware/sensor config — variance across units is a
+  real, current requirement even with one value set today.
+- It's an accessibility affordance — its users don't show up in call-site greps.
+- It's a single-implementation test seam exercised by an actual test today — that's
+  DIP, keep it (same precedence rule as under SOLID).
