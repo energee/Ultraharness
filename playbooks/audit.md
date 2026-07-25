@@ -44,7 +44,10 @@ you need the reasoning behind a rule). Then:
   `<!-- harness:begin -->` pointer blocks in the target's root `AGENTS.md` /
   `CLAUDE.md`. On a seeded repo they dominate both lists (the two pointer files are
   ~100% identical by construction). Still quote them in the script's report; just
-  never score them. The same exclusion applies when you count references to decide
+  never score them. What is excluded is the block, not the file: a root `AGENTS.md`
+  or `CLAUDE.md` that also carries the target's own content is still scored on that
+  content — skip only the delimited block. Skip such a file whole only when the block
+  is all it contains. The same exclusion applies when you count references to decide
   whether something is unused: a symbol or file named only from `.agents/` has zero
   real callers, because the mention is your own note about the repo, not the repo.
 - Apply all four rubrics (DRY, KISS, SOLID, YAGNI), including each rubric's

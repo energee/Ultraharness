@@ -71,8 +71,14 @@ Assert:
 - The pointer blocks did not double: counting `harness:begin` in both
   `<fixture>/AGENTS.md` and `<fixture>/CLAUDE.md` gives 1 each.
 - `.gitignore` gained no duplicate line.
-- The tree is clean, or the only diff is a refresh you can name and justify against
-  something that actually changed since the first run.
+- The tree is strictly clean: `git -C <fixture> status --porcelain` prints nothing.
+  Nothing changed between the two runs, so there is nothing a refresh could
+  legitimately be refreshing — any diff means the first run left something stale,
+  which is itself a defect to fix in step 7.
+- No new commit: the fixture's commit count is unchanged and `Seed .agents/ harness`
+  appears exactly once in the log. The re-seed's `git commit` exits nonzero with
+  "nothing to commit"; the run must report that as "already current, no commit", not
+  as a failed seed and not by forcing an empty commit.
 
 ### 5. Audit the fixture
 

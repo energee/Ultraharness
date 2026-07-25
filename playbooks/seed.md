@@ -54,7 +54,9 @@ Observe the target's own code only. Exclude the harness's own footprint — ever
 under `<target>/.agents/` and the `<!-- harness:begin -->` blocks in the target's root
 `AGENTS.md` / `CLAUDE.md` — from both the conventions and `{{REPO_SUMMARY}}`. That
 footprint is yours, not the repo's; counting it makes every re-seed rewrite the
-summary with numbers that grew only because you seeded.
+summary with numbers that grew only because you seeded. In those two root files the
+exclusion is the delimited block, not the file: content the target already had is the
+repo's own, and is evidence like any other file.
 
 Read enough of the target's source to fill each section of `conventions.md`
 (Layout, Naming, Testing patterns, Error handling, Commit style — for commit style,
@@ -68,8 +70,15 @@ read recent `git -C <target> log` output). Rules of evidence:
   inventing content.
 
 Also draft a 2-4 sentence `{{REPO_SUMMARY}}`: what the repo is, its ecosystem
-(from the `detected:` line), and rough size (from the `size:` line — on a re-seed
-that line counts the `.agents/` files too, so subtract them).
+(from the `detected:` line), and rough size (from the `size:` line).
+
+On a first seed the `size:` line is the target's own size — nothing has been seeded
+yet, so use it as printed. On a re-seed it is not: the script inventories tracked
+files, so it now also counts the seeded footprint — the five `.agents/` files, both
+adapter files, and `.gitignore` if seeding created it (8 added files on a repo that
+had no `.gitignore`, 7 on one that did). Do not "correct" the printed number; facts
+stay the script's. Keep the size already recorded in `.agents/AGENTS.md` — it was
+measured pre-seed — and revise it only when the target's own code has changed.
 
 ### 4. Instantiate `.agents/`
 
