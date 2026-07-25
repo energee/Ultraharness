@@ -58,20 +58,27 @@ Loop the following. One pass = one finding.
   re-audit first. An `in-progress` entry is resumed at whatever step its worktree
   and attempts count indicate: if its worktree
   `<target>/.agents/worktrees/<finding-slug>/` exists, work out where the pass died
-  from the **worktree**, not from branch topology. Topology cannot tell you: step 3
-  cuts the branch from base and step 8 is the first commit on base, so every merge
-  here fast-forwards and a landed fix leaves base tip == branch tip — the same shape
-  as a branch that never committed anything. `--merged` says "merged" in both cases.
-  Instead, run `git -C <worktree> add -AN` (so new files show) then
-  `git -C <worktree> status --porcelain`, and read off the state:
+  from the **worktree status and the branch tip's message** first; topology alone
+  cannot tell you. In the normal case every merge here fast-forwards — step 3 cuts the
+  branch from base and nothing commits to base until step 8 — so a landed fix leaves
+  base tip == branch tip, the same shape as a branch that never committed anything.
+  `--merged` says "merged" for both, and identity with base's tip proves nothing.
+  (A branch left over from an interrupted run can be stale enough that later passes
+  moved base; step 7 handles that merge.)
+
+  Run `git -C <worktree> add -AN` (so new files show) then
+  `git -C <worktree> status --porcelain`, and evaluate these **in order**, taking the
+  first that matches:
   - **Non-empty** — the pass died mid-fix and its work is that uncommitted diff.
     Inspect it and continue from fix or verify.
-  - **Empty, and the branch tip is a commit this pass made** (its message names this
-    finding): the fix is committed. If that commit is reachable from the base branch,
-    it landed — jump to step 7's ledger update. If it is not, the merge never
-    happened — resume at step 7's merge.
-  - **Empty, and the branch tip is just the base commit** — nothing was ever done.
-    Treat it as `open` and restart the pass.
+  - **Empty, and the branch tip's message names this finding's slug** (step 7 requires
+    that message): this pass committed its fix. Only now does topology decide which —
+    if that commit is reachable from the base branch it landed, so jump to step 7's
+    ledger update; if it is not, the merge never happened, so resume at step 7's merge.
+  - **Empty, and the branch tip's message does not name this finding** — the tip
+    belongs to some earlier pass, so this one never committed anything. Treat it as
+    `open` and restart the pass. Do not test this by comparing the branch tip against
+    base's tip: after a fast-forward they match on a landed fix too.
 
   If no worktree exists, treat it as `open` and restart the pass (increment nothing —
   attempts count only completed fix attempts).
@@ -132,7 +139,10 @@ diff line by line and simplify. If de-sloppifying changed anything, run verify a
 ### 7. Merge back
 
 Commit the fix on the finding's branch first — an uncommitted worktree has nothing to
-merge — with no Co-Authored-By line. On a resume that already carries its commit (step
+merge — with a message naming the finding's slug, and no Co-Authored-By line. The slug
+is not decoration: step 1's resume path reads that message to tell this pass's commit
+from an earlier pass's, and a message without it leaves a resumed run unable to tell a
+committed fix from an untouched branch. On a resume that already carries its commit (step
 1's second state), there is nothing left to commit: skip straight to the merge, and
 never manufacture an empty commit to satisfy this sentence. Then merge the branch into
 the run's base branch,
@@ -227,4 +237,4 @@ before concluding anything about capability.
 | "The envelope tripped but the queue is almost empty." | Stop cleanly, report scope remaining. "Almost empty" is exactly what the next run's ledger is for. |
 | "This in-progress entry is stale, I'll just start fresh." | Resume it. The ledger surviving session death is the point — inspect its worktree before deciding anything. |
 | "The recorded base branch isn't checked out — I'll just check it out and carry on." | Stop and report both. This playbook never switches the target's checkout; something moved it, and guessing which branch is right is how a fix lands on the wrong one. |
-| "The branch reports merged, so the fix is done." | Every merge here fast-forwards, so "merged" is also what a branch that committed nothing looks like. Read the worktree's status, not the topology. |
+| "The branch reports merged, so the fix is done." | Merges here normally fast-forward, so "merged" — and base-tip identity — is also what a branch that committed nothing looks like. Worktree status and the tip message come first; only then does reachability decide landed vs unmerged. Skipping that last check strands a finding on its branch. |
