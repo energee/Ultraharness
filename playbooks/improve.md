@@ -71,14 +71,19 @@ Loop the following. One pass = one finding.
   first that matches:
   - **Non-empty** — the pass died mid-fix and its work is that uncommitted diff.
     Inspect it and continue from fix or verify.
-  - **Empty, and the branch tip's message names this finding's slug** (step 7 requires
-    that message): this pass committed its fix. Only now does topology decide which —
-    if that commit is reachable from the base branch it landed, so jump to step 7's
+  - **Empty, and the branch tip's first line begins `fix(<this finding's slug>):`**
+    (step 7 mandates exactly that form): this pass committed its fix. Match the
+    closing `):` too — a bare substring test also matches a sibling finding whose slug
+    merely extends this one (`dup-blocks` inside `dup-blocks-tests`), and that
+    sibling's commit read as this pass's own is the one misfire that silently marks a
+    finding `done` with no fix ever written. Only now does topology decide which — if
+    that commit is reachable from the base branch it landed, so jump to step 7's
     ledger update; if it is not, the merge never happened, so resume at step 7's merge.
-  - **Empty, and the branch tip's message does not name this finding** — the tip
-    belongs to some earlier pass, so this one never committed anything. Treat it as
-    `open` and restart the pass. Do not test this by comparing the branch tip against
-    base's tip: after a fast-forward they match on a landed fix too.
+  - **Empty, and the branch tip's first line does not begin `fix(<this finding's
+    slug>):`** — the tip belongs to some earlier pass, so this one never committed
+    anything. Treat it as `open` and restart the pass. Do not test this by comparing
+    the branch tip against base's tip: after a fast-forward they match on a landed fix
+    too.
 
   If no worktree exists, treat it as `open` and restart the pass (increment nothing —
   attempts count only completed fix attempts).
@@ -110,6 +115,11 @@ Create a worktree for this one finding at
 `harness/<finding-slug>`, branched from the run's base branch (readiness step 4).
 One finding, one worktree, one branch. All fix work happens inside it.
 
+Arriving here from step 1's restart path, both already exist and hold no work — that is
+how step 1 reached that bullet. Do not improvise: reset the existing branch to the
+current base branch and reuse the worktree (or delete both and re-cut them). Either way
+the pass starts from current base, so step 7 has only this pass's fix to merge.
+
 ### 4. Fix
 
 Make the minimal change that resolves the finding, following the target's recorded
@@ -139,10 +149,12 @@ diff line by line and simplify. If de-sloppifying changed anything, run verify a
 ### 7. Merge back
 
 Commit the fix on the finding's branch first — an uncommitted worktree has nothing to
-merge — with a message naming the finding's slug, and no Co-Authored-By line. The slug
-is not decoration: step 1's resume path reads that message to tell this pass's commit
-from an earlier pass's, and a message without it leaves a resumed run unable to tell a
-committed fix from an untouched branch. On a resume that already carries its commit (step
+merge — with a first line beginning exactly `fix(<finding-slug>): ` and no
+Co-Authored-By line. That form is not decoration: step 1's resume path matches it, with
+the closing `):`, to tell this pass's commit from an earlier pass's. A message without
+it leaves a resumed run unable to tell a committed fix from an untouched branch, and a
+looser form lets a sibling slug that extends this one match instead. On a resume that
+already carries its commit (step
 1's second state), there is nothing left to commit: skip straight to the merge, and
 never manufacture an empty commit to satisfy this sentence. Then merge the branch into
 the run's base branch,
