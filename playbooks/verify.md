@@ -25,6 +25,14 @@ typecheck commands are the verified ones recorded in `<target>/.agents/AGENTS.md
    to run — note that up front: the verdict below must be
    **PASS (unverified-by-tests)** or FAIL, never a bare PASS, and never a silent
    skip.
+   - **Unless the change under verification is the one that adds the suite.** Read
+     the step-2 diff: if it introduces tests, the recorded `none` is stale — it
+     describes the repo before this change, and this change is what makes it false.
+     Determine the new suite's command from the diff and the target's README, run
+     it, and verdict on it normally (PASS or FAIL). Verifying a test-adding change
+     against the record instead of against the diff is how a broken new suite passes
+     its own gate: the one change whose whole purpose is to create a suite would be
+     the one change never actually run.
 
 ## Workflow
 
@@ -68,7 +76,8 @@ status, failure names). A verdict with no quoted output is invalid; redo the run
 - **PASS** requires: every recorded command ran fresh and succeeded, the full diff
   was read, and step 4 raised nothing.
 - **PASS (unverified-by-tests)** requires: `.agents/AGENTS.md` records `none` or
-  `none verified` for tests (so there was no suite to run), the full diff was read
+  `none verified` for tests *and* the change under verification does not itself add
+  a suite (so there was genuinely no suite to run — see probe item 3), the full diff was read
   end to end, step 4 raised nothing, and every command that *is* recorded — build,
   typecheck — ran fresh and succeeded. Name it exactly this way, with the qualifier;
   it is an honest verdict about a testless repo, not a softened PASS, and callers

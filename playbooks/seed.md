@@ -55,6 +55,15 @@ strings; they become `{{BUILD_CMD}}`, `{{TEST_CMD}}`, `{{TYPECHECK_CMD}}`.
 If a category genuinely has no such command (e.g. no typechecker in this ecosystem),
 record `none` for it — that is an honest answer, not a failure.
 
+Running these commands can leave build artifacts behind — `__pycache__/`, `target/`,
+`dist/`, coverage output — dirtying a tree that probe item 4 certified clean minutes
+earlier, with files this playbook did not write. After verifying, re-run
+`git -C <target> status --porcelain`. Anything new is either already covered by the
+target's ignore rules, or it is a gap in them. Delete the artifacts; do not stage them
+in step 7, and do not add ignore rules on the target's behalf — a missing rule the
+target clearly should have is a finding for `playbooks/audit.md`, not a file to edit
+here.
+
 ### 3. Observe conventions
 
 Observe the target's own code only. Exclude the harness's own footprint — everything

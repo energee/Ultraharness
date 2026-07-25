@@ -40,11 +40,24 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
    finding #1, ranked above everything else, and is fixed first so every later
    failure is attributable to a change, not to the starting state. Record the
    baseline result (pass/fail, quoted summary line) before touching anything.
+   - A red baseline is *your* entry to write, not the audit's. `playbooks/audit.md`
+     grades code quality, and its `testing` slot covers only a missing evidence base —
+     no suite, or a suite that asserts nothing. A suite that runs, asserts, and fails
+     is neither, so audit emits nothing for it and step 1's queue comes back without
+     it. Write the entry here, before step 1: slug `red-baseline`, principle slot
+     `testing`, severity `high`, `file:line` the first failing assertion, the quoted
+     summary line as evidence. Skip this and the gate is silently defeated — the loop
+     walks straight past the red suite to the next finding.
    - If `.agents/AGENTS.md` records `none verified` or `none` for tests, proceed:
      both mean the same thing here — there is no test suite to run. The missing test
-     suite IS finding #1, and until it's fixed `playbooks/verify.md` returns
-     **PASS (unverified-by-tests)** per its own §5 — that verdict is not a FAIL and
-     does not count toward the 3-attempt limit.
+     suite IS finding #1. For every *other* finding, while no suite exists,
+     `playbooks/verify.md` returns **PASS (unverified-by-tests)** per its own §5 —
+     that verdict is not a FAIL and does not count toward the 3-attempt limit. Finding
+     #1 itself is the exception: the pass that adds the suite is verified by running
+     the suite it just added (verify's probe item 3), so it earns a normal PASS or
+     FAIL, and its FAILs do count. Without that exception the missing-tests finding
+     could never fail, never park, and never reach the Hard stop below — and a broken
+     new suite would pass its own gate.
    - Only a `.agents/AGENTS.md` that records no test entry at all (neither `none` nor
      `none verified`) means seeding is incomplete — run `playbooks/seed.md` first.
 
@@ -227,10 +240,17 @@ After 3 failed fix attempts on one finding: stop attempting, set
 `status: parked(<gap: context|capability|authority|proof|feedback>)` choosing the
 gap that blocked you, and write the ruling the ledger's standing rules require —
 which gap, what evidence, what would unpark it. Then revert the worktree and move to
-the next finding — unless this is the baseline finding (readiness step 5's #1), in
-which case the run stops here instead; see Hard stops below. Never silently drop a
-finding, and never conclude "worker limitation" from a single failed run — retry
-before concluding anything about capability.
+the next finding.
+
+Unless this is the baseline finding (readiness step 5's #1): then the run stops here
+instead — and **leave its worktree in place, unreverted**. The attempts it holds are
+the evidence behind the ruling's "what would unpark it", and a human resolving an
+`authority` gap reads them. This is the one worktree the loop deliberately keeps; say
+in the report that it is there and what is in it. Everything else about the stop is in
+Hard stops below.
+
+Never silently drop a finding, and never conclude "worker limitation" from a single
+failed run — retry before concluding anything about capability.
 
 ### Hard stops
 
@@ -238,15 +258,30 @@ before concluding anything about capability.
   errors before running any test (command not found, harness crash) → stop; that is
   a seeding gap, report it. A recorded `none` or `none verified` is NOT this stop —
   it proceeds with missing tests as finding #1 (readiness step 5).
-- The baseline finding (readiness step 5's finding #1) parked → stop the run. No
-  later fix can be verified against a red suite, so continuing would park every
-  remaining finding on the same cause. Write the ledger and report it.
+- The baseline finding (readiness step 5's finding #1) parked → stop the run.
+  Continuing would spend the envelope on the same cause: with a red suite, no later
+  fix can be verified at all; with a suite the run failed to *add*, later fixes could
+  only earn PASS (unverified-by-tests), so the run would merge a pile of unverified
+  changes and call it done. Neither is worth the remaining budget. Write the ledger
+  and report it — and leave the baseline worktree in place per the failure path above.
 - Verify itself is broken (the harness's gate, not the target's tests) → stop and
   report; do not self-certify fixes.
 - The run's base branch moved underneath you in ways you cannot cleanly merge
   → stop, write the ledger, report the conflict.
-- **On any stop above** — append one ledger entry recording what stopped the run and
-  what would unblock it before reporting to the user.
+- **On any stop above** — record the stop in the ledger, then commit it, then report
+  to the user. Both halves matter:
+  - **Record it** under a `## <date: ISO YYYY-MM-DD> run-stopped` heading with two
+    lines, `- stopped: <what stopped the run>` and `- unblocks: <what would clear
+    it>`. It is a run record, not a finding, so it does not take the `Entry format`
+    fields — no status, no attempts, no delta. Skip it entirely when a parked
+    finding's own `ruling:` already says both things, as the parked-baseline stop
+    does; one honest record beats two that can drift apart.
+  - **Commit it.** Every stop above bypasses step 8, the only step that commits
+    anything in the target, so the ledger write lands in the working tree and stays
+    there. That defeats the point of writing it: an uncommitted ledger does not
+    survive a checkout, a stash, or a branch switch, and the parked ruling is the most
+    expensive thing the run produced. Commit `.agents/ledger.md` on the base branch
+    before reporting, and leave the target's tree clean.
 
 ## Anti-rationalization table
 
