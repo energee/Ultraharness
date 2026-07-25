@@ -244,6 +244,13 @@ cannot name the observation, you are editing on taste and the edit does not go i
 Docs travel with the fix: if the behavior you changed is described in `README.md`,
 `AGENTS.md`, or another playbook, update those in the same change.
 
+Assertions travel with the fix too, and they go **first**. If the fix touches
+`scripts/audit-checks.sh`, add the `assert_grep` — and any fixture file it needs — to
+`scripts/test.sh` before the fix, and re-run step 1 to watch it fail. An assertion
+written afterwards was never tested; it was checked against code that already
+satisfied it. Same order for a check you add unprompted: red in `test.sh`, then green
+in `audit-checks.sh`.
+
 ## Not covered
 
 This playbook exercises `seed.md` and `audit.md` end to end, and **one** pass of

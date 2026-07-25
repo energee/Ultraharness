@@ -1,7 +1,9 @@
 # harness
 
 Point any coding agent at this repo to make **another** repo simpler, DRY-er, KISS,
-SOLID, and YAGNI. There is no install and no runtime — everything here is markdown
+SOLID, and YAGNI — plus conditional lenses (idempotency, atomic design) that apply
+only if the repo has the thing they judge. There is no install and no runtime —
+everything here is markdown
 plus two thin bash scripts. The agent reads a front door, routes to a playbook, and
 does the rest.
 
@@ -134,7 +136,10 @@ that is present applies — the audit does not re-litigate the gate.
 
 Lens findings put the lens name in the principle slot: `[idempotency/high]`,
 `[atomic/med]`. To add a lens, write it in `lenses/` with the same sections as a rubric
-plus a Gate, and its condensed twin in `templates/agents-dir/lenses/`.
+plus a Gate, and its condensed twin in `templates/agents-dir/lenses/`. Write the
+self-test's fire/no-fire assertions (step 5a) **before** the lens itself, and watch
+them fail: a gate is only proven by a fixture it fires on and a fixture it withholds
+from, and neither exists until you build it.
 
 ## Rules the agent is held to
 
