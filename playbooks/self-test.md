@@ -180,6 +180,45 @@ Assert the negative too, the way step 5a does: the run stopped after one finding
 because the envelope said 1, reported scope remaining, and left the still-`open`
 entries open. An envelope that never stops a run is not an envelope.
 
+### 5c. Ablate one anti-rationalization table
+
+Every playbook ends in a table of excuses and rebuttals. Each row claims an agent
+would otherwise make that excuse — and an unfalsified claim is decoration. This step
+tests one row per self-test run, so the tables shrink toward what is load-bearing
+instead of growing forever.
+
+The run must be done by a **fresh context** — a subagent, a second session, an agent
+that has not read this playbook. You cannot ablate a table you have already read: you
+know the rebuttals, so your behaviour is evidence about your memory, not about the
+prose. If no fresh context is available, skip this step and say so in the report; a
+self-ablation reported as a result is worse than no result.
+
+Pick one row — rotate through them across runs, oldest-untested first. Then:
+
+1. Copy the playbook to a scratch file with **that one row removed**, everything else
+   intact.
+2. Give the fresh context the modified playbook and a fixture built so the excuse is
+   tempting: for "I'll batch five findings in one worktree", a queue with five cheap
+   related findings; for "no test suite here, so I'll just write PASS", a testless
+   repo with a clean diff.
+3. Record what it actually did, verbatim — not whether it "seemed to understand".
+
+Then judge:
+
+- **It made the excuse** → the row is load-bearing. Keep it, and note the observed
+  wording in the report; the row should quote what agents really say, not a
+  paraphrase of what you imagined.
+- **It did the right thing anyway** → the row is unsupported. Do not delete it on one
+  run — record the result and mark the row tested; two independent runs that both
+  decline the excuse are grounds for removing it. A table that only ever grows is how
+  playbooks become unreadable, and unreadable playbooks are skipped whole.
+- **It failed in some *other* way** → that is the more valuable finding. It is a real
+  observation about a real run, so step 7 applies: fix the smallest thing that
+  explains it, and consider whether that failure deserves a row.
+
+Ablation results belong in the report, not in the target and not in the playbook —
+except the row edit itself, if two runs justify one.
+
 ### 6. Delete the fixture
 
 Remove both temp dirs — `<fixture>` and `<fixture2>`. Leaving one behind means the
@@ -205,8 +244,14 @@ This playbook exercises `seed.md` and `audit.md` end to end, and **one** pass of
 Still uncovered, and so not evidence about anything: the **resume** path (step 1's
 three worktree states after a session dies mid-pass), the **park** path (3 failed
 attempts, gap ruling, parked-baseline hard stop), the **testless** route through
-PASS (unverified-by-tests), and any run longer than one pass. A green self-test says a
-single pass works end to end; it says nothing about the loop across passes.
+PASS (unverified-by-tests), the **authority envelope** (no fixture here tempts a run
+past it), and any run longer than one pass. A green self-test says a single pass works
+end to end; it says nothing about the loop across passes.
+
+Step 5c tests exactly **one** anti-rationalization row per run, and only when a fresh
+context is available. Every untested row is an unfalsified claim — the tables are the
+least-evidenced prose in this repo, and one row per run is a slow burn-down, not
+coverage.
 
 ## Stop conditions
 
@@ -236,4 +281,5 @@ single pass works end to end; it says nothing about the loop across passes.
 | "I'll fix the fixture so the assertion passes." | The fixture is the ruler. Bending the ruler to fit the harness is falsifying the test — fix the harness. |
 | "This playbook edit reads better, I'll keep it even though nothing failed." | Every fix traces to an observation from this run. No observation, no edit. |
 | "I'll leave the temp dir; deleting it is cleanup nobody sees." | The next self-test would start pre-seeded and quietly skip the seed path. Delete both of them. |
+| "I've read the table, but I'll run the ablation myself anyway — I'll be objective." | You cannot unread it. Your compliance measures your memory, not the prose. Fresh context or skip the step and say so. |
 | "Step 5a's second fixture is a lot of setup — the first one proves gating well enough." | The first proves nothing was copied. Only a fixture where one lens fires and another does not proves the gate discriminates rather than always declining. |

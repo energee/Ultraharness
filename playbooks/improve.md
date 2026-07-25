@@ -222,6 +222,17 @@ this pass wrote is left dirtying the target.
   convention the fix had to follow, a trap that cost an attempt — append one line to
   `<target>/.agents/learnings.md` in that file's format, incrementing `seen` on an
   existing line rather than adding a duplicate. Nothing learned, nothing written.
+- **Name what you actually read.** State, in the report, which seeded context this
+  pass consumed: the conventions it followed, the learnings it heeded, the lens or
+  rubric entry the finding came from — or `none applied`, which is an honest and
+  common answer. Available is not retrieved: a `conventions.md` no pass ever opens is
+  indistinguishable from one that does not exist, and `none applied` repeated across
+  passes is the evidence that a seeded file is not earning its place.
+- **Say what you wished you had.** One line in the report for anything this pass had
+  to rediscover, work around, or guess: a fact recorded nowhere, a command that did
+  not exist, a rubric that did not cover the case. This is telemetry for whoever
+  maintains the harness, not context for the next session — it goes in the report, not
+  into the target. Nothing missing, nothing written.
 - Make a checkpoint commit in the target covering everything this pass still has
   uncommitted: the ledger update, and any `AGENTS.md` or `learnings.md` edit above.
   The fix itself is already on the base branch — step 7's merge put it there — so it
@@ -239,6 +250,23 @@ repeat twice more. New findings at any re-audit reset the count and re-enter the
 loop, envelope permitting.
 
 ## Stop conditions
+
+### Authority envelope
+
+The safety envelope below bounds how *much* a run does; this bounds *what* it may do.
+Inspection authority is not mutation authority. Without asking, a run may change the
+target's own source, tests, and docs, and write the files this harness owns. It may
+not, without explicit user say-so in this run: push, open or merge a pull request,
+change the target's remote, rewrite published history, touch CI/deploy config or
+secrets, add or upgrade a dependency, delete a test, or switch the target's checked-out
+branch. Merging a finding's branch into the run's base branch locally is inside the
+envelope — that is step 7, and it is local and revertible; getting that work off the
+machine is not.
+
+An action outside the envelope is not a hard stop: park nothing, finish the pass, and
+name the action in the report as something waiting on the user. If the *fix itself* is
+impossible without one — a dependency upgrade is the finding — that is
+`parked(authority)` with the ruling naming the grant that would unpark it.
 
 ### Safety envelope
 
@@ -265,8 +293,9 @@ first line beginning `parked(<finding-slug>): ` — deliberately not the `fix(` 
 step 1's resume path cannot mistake it for a landed fix — and record its **commit SHA**
 in the ruling. The SHA, not the branch name: step 3 resets `harness/<finding-slug>` and
 step 7 deletes it, so the branch stops pointing at the attempts the moment anyone
-unparks the finding, which is exactly when someone follows the pointer. An uncommitted worktree is not preservation: step 3's reset path wipes it the
-moment anything restarts the finding. Leave the worktree in place too, and say in the
+unparks the finding, which is exactly when someone follows the pointer. An uncommitted
+worktree is not preservation: step 3's reset path wipes it the moment anything
+restarts the finding. Leave the worktree in place too, and say in the
 report that it is there. Everything else about the stop is in Hard stops below.
 
 Never silently drop a finding, and never conclude "worker limitation" from a single
@@ -314,4 +343,6 @@ failed run — retry before concluding anything about capability.
 | "The envelope tripped but the queue is almost empty." | Stop cleanly, report scope remaining. "Almost empty" is exactly what the next run's ledger is for. |
 | "This in-progress entry is stale, I'll just start fresh." | Resume it. The ledger surviving session death is the point — inspect its worktree before deciding anything. |
 | "The recorded base branch isn't checked out — I'll just check it out and carry on." | Stop and report both. This playbook never switches the target's checkout; something moved it, and guessing which branch is right is how a fix lands on the wrong one. |
+| "The fix is done and green — I'll push it so the user has it." | Outside the authority envelope. Local merge is yours; anything that leaves the machine is the user's call, named in the report and left undone. |
+| "Nothing to say for 'what I read' — I just fixed the thing." | Then write `none applied`. That is the answer that tells the user a seeded file is dead weight; silence tells them nothing. |
 | "The branch reports merged, so the fix is done." | Merges here normally fast-forward, so "merged" — and base-tip identity — is also what a branch that committed nothing looks like. Worktree status and the tip message come first; only then does reachability decide landed vs unmerged. Skipping that last check strands a finding on its branch. |
