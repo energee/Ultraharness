@@ -17,9 +17,9 @@ Confirm all of these before proceeding; if any fails, stop and fix it first.
    harness repo itself unless explicitly told to.
 2. The target is seeded: `<target>/.agents/` exists and contains `principles.md` and
    `ledger.md`. If not, run `playbooks/seed.md` first, then return here.
-   **Read-only exception**: if the user asked for an audit without seeding (or the
-   target must not be written to at all), run in read-only mode — announce it up
-   front, read the rubric from `<harness>/templates/agents-dir/principles.md`
+   **Read-only exception**: if the user asked for an audit without seeding, or the
+   user said the target must not be written to, run in read-only mode — announce it
+   up front, read the rubric from `<harness>/templates/agents-dir/principles.md`
    instead of the target's copy, and write findings to a scratch file the user names
    instead of a ledger (step 6). Everything else in this playbook is unchanged. Never
    choose this mode yourself to avoid seeding; it is the user's call.
