@@ -45,8 +45,9 @@ Smallest intervention first:
   keyboard handlers) for being "unused" by current automated tests — they have users who
   don't show up in call-site greps.
 - A single-implementation interface that exists to break a dependency-injection/test seam
-  (see `solid.md` DIP) is not speculative — it's paying for testability now, not for a
-  hypothetical future.
+  (see `solid.md` DIP) is not speculative only if the seam is exercised by an actual test
+  today. Precedence rule (matches `solid.md`): tested seam → DIP, keep it, don't flag;
+  untested seam → YAGNI, flag it as speculative.
 
 ## Finding format
 

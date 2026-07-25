@@ -41,6 +41,8 @@ In practice, SRP and DIP catch the most real defects — spend most of the budge
 
 - Don't introduce an interface/abstraction with a single implementation "for testability"
   or "for the future" — that's speculative and belongs to YAGNI's failure mode too.
+  Precedence rule (matches `yagni.md`): if the seam is exercised by an actual test today,
+  treat it as DIP (keep it, don't flag); if untested, treat it as YAGNI (flag it).
 - Don't split a cohesive class just because it's long; SRP is about reasons to change, not
   line count (see `kiss.md` for length-based findings).
 - Small internal helper classes with no external consumers don't need interface
