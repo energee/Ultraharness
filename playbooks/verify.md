@@ -74,11 +74,14 @@ YAGNI and KISS: did the fix itself introduce speculative structure (an abstracti
 with one caller, a config knob nothing sets, a "for future use" seam)? A fix that
 adds new findings is not done.
 
-Then read the diff's deletions against that file's guard-precedence preamble: does
+Then read the diff's deletions against that file's `## Guard precedence` section: does
 this change remove or weaken validation, an authorization check, an error branch, a
 timeout, a bound, a cleanup path, a transaction wrapper, or a version pin? If it does,
-the verdict is **FAIL** unless the diff also shows the boundary itself is gone. "It
-had no callers" is not that showing — framework-dispatched guards never do.
+the verdict is **FAIL** unless the diff also shows the boundary itself is gone, or the
+same check moved intact to a shared home the boundary still calls — consolidating five
+copies into one deletes four and weakens nothing. "It had no callers" is not that
+showing; framework-dispatched guards never do. The evidence for this verdict is the
+deleted hunk itself, quoted — it is a reading check, so no command output backs it.
 
 ### 5. Verdict
 
@@ -100,6 +103,11 @@ status, failure names). A verdict with no quoted output is invalid; redo the run
 - **FAIL** on anything else, listing exactly what failed and the output proving it.
   A recorded test command that ran and failed is always FAIL — the qualified PASS is
   only for a repo with no test command at all.
+
+A FAIL raised by that guard check is the one FAIL the caller must not iterate on: the
+fix *is* the deletion, so three attempts produce the same verdict three times. It is a
+policy park under `playbooks/improve.md` step 2's irreversible-fixes rule — hand it
+back as `parked(authority)` at `attempts: 0/3`, not as a spent budget.
 
 **Rule: on FAIL, the fix iterates — never the test.** Weakening, skipping, or
 deleting a test to get to PASS is falsifying the evidence this gate exists to

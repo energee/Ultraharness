@@ -128,6 +128,12 @@ After writing, search `<target>/.agents/` for the string `{{` — it must not ap
   it would otherwise freeze every repo seeded before a template grew a section, which
   is exactly the repo that needs the new content. Harness-owned sections are the ones
   the template defines; anything else in the file is the user's and stays untouched.
+  Insert it where the template puts it, relative to the sections either side — never
+  appended blindly to the end, which would land `## Guard precedence — governs all
+  four rubrics below` beneath the rubrics it claims to govern, and would put a
+  template heading after `ledger.md`'s append-only entries. Instantiate any `{{...}}`
+  placeholders from steps 2-3 exactly as on a first seed, so step 4's `{{` assertion
+  still holds. Name the sections you added in the report.
 - If a file is missing, create it from the template as above.
 
 ### 5. Adapter files at the target root

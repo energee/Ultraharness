@@ -125,7 +125,7 @@ owns the problem — the earliest point in the causal chain where one change fix
 not the broadest refactor that would also fix it. Update its ledger entry to
 `status: in-progress` before doing anything else.
 
-Two standing rules shape what counts as an improvement:
+Three standing rules shape what counts as an improvement:
 
 - **Removal earns equal rank.** Deleting code, dependencies, dead config, or harness
   artifacts that no longer earn their maintenance cost — including files this
@@ -139,12 +139,17 @@ Two standing rules shape what counts as an improvement:
 - **Irreversible fixes are the human's call.** If the smallest intervention that owns
   the problem would destroy persisted data (dropping a column, table, migration, or
   serialized field) or remove a guard, do not attempt it. Set the entry to
-  `parked(authority)` with `attempts: 0/3` and a ruling naming exactly what would be
-  destroyed — that is a policy park, not an exhausted budget, and what the fix would
-  destroy *is* the ruling's evidence. Then move to the next finding; the run
-  continues. This loop merges unattended and `playbooks/verify.md` cannot prove a
-  deletion was safe, so the one class of fix `git revert` cannot undo is the one class
-  a human decides.
+  `parked(authority)` with `attempts: 0/3` and a ruling giving all three fields the
+  ledger requires: the gap is `authority`, the evidence is exactly what the fix would
+  destroy, and what would unpark it is a human's explicit go-ahead for that specific
+  deletion. Until then the entry is not in the queue, whatever its attempts count
+  says — `0/3` records a policy park, not an untouched budget to be spent later.
+  Commit the ledger before moving on; this rule exits the pass before step 8, the only
+  step that otherwise commits, and an uncommitted ruling does not survive a checkout.
+  Then move to the next finding and the run continues — unless this is the baseline
+  finding (readiness step 5's #1), which stops the run per Hard stops. This loop merges
+  unattended and `playbooks/verify.md` cannot prove a deletion was safe, so the one
+  class of fix `git revert` cannot undo is the one class a human decides.
 - **Docs travel with the change.** Update stale comments, docstrings, and docs that
   reference the changed behavior in the same change, per finding — never deferred to
   a cleanup pass.
@@ -323,6 +328,7 @@ failed run — retry before concluding anything about capability.
 | "The baseline is only a little red." | The gate holds. Red baseline = finding #1, fixed first. Nothing else starts before it. |
 | "The suite is still red, so I'll open a fresh red-baseline finding." | One per target, ever. A parked `red-baseline` is the hard stop, not a new entry with a new 0/3 budget. |
 | "Nothing references this validator, so it is dead code." | Framework-dispatched guards never have in-tree callers. Removal at a boundary needs the boundary gone, not the symbol uncalled. |
+| "This column is obviously dead, and a human can always revert it." | They cannot — dropped rows do not come back. Irreversible fixes park for a human; that is step 2's third standing rule. |
 | "I'll batch five findings in one worktree." | One finding, one worktree, one verify. Batching makes failures unattributable and reverts impossible. |
 | "De-sloppify is overhead on a small diff." | It runs. On a small diff it's cheap; on any diff it's where the slop hides. |
 | "I'm close — one more attempt past 3 will crack it." | Park it with a gap ruling. The 4th attempt is what the next run, with fresh context, is for. |

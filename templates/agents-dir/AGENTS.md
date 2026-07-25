@@ -18,8 +18,9 @@ observation of this codebase — match them before inventing your own.
 
 ## Principles
 
-`principles.md` is the condensed rubric (DRY, KISS, SOLID, YAGNI) used to spot and
-rank code-quality findings here. Read it before auditing or improving anything.
+`principles.md` is the condensed rubric (DRY, KISS, SOLID, YAGNI, plus the guard
+precedence that governs all four) used to spot and rank code-quality findings here.
+Read it before auditing or improving anything.
 
 ## Ongoing work
 

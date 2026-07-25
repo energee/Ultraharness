@@ -64,7 +64,10 @@ you need the reasoning behind a rule). Then:
   `.agents/` has zero real callers, because the mention is your own note about the
   repo, not the repo.
 - Apply all four rubrics (DRY, KISS, SOLID, YAGNI), including each rubric's
-  "do NOT apply when" exclusions.
+  "do NOT apply when" exclusions, and the `## Guard precedence` section that governs
+  all four: never emit a removal finding against a guard on a zero-reference argument.
+  That section is upstream of this one — a finding you do not raise here cannot be
+  acted on later.
 
 Emit every finding in exactly this format:
 
