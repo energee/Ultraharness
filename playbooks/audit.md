@@ -21,7 +21,10 @@ Confirm all of these before proceeding; if any fails, stop and fix it first.
    target must not be written to, run in read-only mode — announce it up front, read
    the rubric from `<harness>/templates/agents-dir/principles.md`
    instead of the target's copy, and write findings to a scratch file the user names
-   instead of a ledger (step 6). Everything else in this playbook is unchanged. Never
+   instead of a ledger (step 6). That scratch file lives outside the target; if the
+   user declined seeding without naming a path, ask for one before proceeding — a
+   read-only audit writes nothing into the target, including its own output.
+   Everything else in this playbook is unchanged. Never
    choose this mode yourself to avoid seeding; it is the user's call.
 3. The fact collector runs clean: from the harness repo root, run
    `bash scripts/audit-checks.sh <target-path>` and confirm it exits 0 and prints a
@@ -41,7 +44,8 @@ looks wrong, say so as a finding — but still quote the script's output unchang
 
 ### 2. Judgment pass
 
-Read the target's condensed rubric at `<target>/.agents/principles.md` (it is
+Read the target's condensed rubric at `<target>/.agents/principles.md` — or the
+harness copy at `templates/agents-dir/principles.md` in read-only mode (it is
 self-contained; the harness repo's `principles/` directory holds the full versions if
 you need the reasoning behind a rule). Then:
 
@@ -142,4 +146,5 @@ nothing was written to the target.
 | "No tests, so I'll skip the testing category." | Skipped categories need an absent evidence base that's legitimately absent. Missing tests is a high-severity finding. |
 | "The repo has our `.agents/` dir, that counts in the repo's favor." | Never. Audits judge outcomes only — harness-owned files are never a finding. |
 | "Seeding is a hassle, I'll just go read-only." | Read-only needs an explicit refusal from the user, not your inference. Unasked-for, the answer is seed first. |
+| "Read-only, but the scratch file may as well live in the target — it's one file." | It's still a write to a repo the user said not to write to. The scratch file goes outside the target; if none was named, ask. |
 | "Everything here is low severity." | Grade against the severity anchors in `principles.md`. Absent tests and broken correctness are high, whatever the fix costs. |

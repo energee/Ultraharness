@@ -12,6 +12,9 @@ Severity anchors — grade against these, not against how expensive the fix look
   seam several modules depend on), or a wrong fact in a README, doc, or report.
 - **low** — localized or cosmetic: one file, one call site, no reader misled.
 
+Where two anchors both fit, the higher one wins: a doc naming a command that does not
+exist is a wrong fact *and* blocks a contributor from testing — grade it high.
+
 ## DRY — one authoritative home per piece of knowledge
 
 Spot it:
