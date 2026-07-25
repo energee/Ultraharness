@@ -41,6 +41,11 @@ Create a fresh directory in a temp dir and `git init` it. It must have, at minim
 - **A planted duplication**: the same 10-line block copied into two source files,
   so the audit has one real finding to catch. If the fixture is clean, step 5 proves
   nothing.
+- **A planted swallowed error**: one call wrapped in a catch that discards it — an
+  empty `catch {}`, or a required config value read with a silent default. This is the
+  fail-fast rubric's known answer, the way the duplication is DRY's. Unlike the
+  duplication it is invisible to `audit-checks.sh`, so it tests whether the rubric was
+  applied rather than whether the script ran.
 - At least one file large enough to appear in the script's `largest files` list.
 - **No lens gate may fire on it.** This fixture is the no-fire case: keep it free of
   retry/queue/webhook/cron/migration/deploy constructs and of component-UI files
@@ -108,6 +113,11 @@ Read `playbooks/audit.md` and run it against `<fixture>`, as written. Assert:
 - The script's full report is quoted verbatim in the audit output.
 - At least one finding — specifically, the planted duplication is caught. An audit
   that misses the block you planted is a failed self-test, not a clean repo.
+- The planted swallowed error is caught too, as `[fail-fast/<severity>]`. This is the
+  assertion that proves a rubric was *applied* rather than a script quoted: nothing in
+  `audit-checks.sh` reports it, so the only way it appears is judgment against
+  `principles/fail-fast.md`. An audit that catches the duplication and misses this one
+  has quoted facts without reasoning over them.
 - Every finding uses the exact format
   `[<principle>/<severity>] <file:line> — <what> — <smallest fix>`, and the list is
   ranked with nothing suppressed.
@@ -161,9 +171,14 @@ that has never been executed is unverified. Run exactly one pass.
 
 Build a third fixture, `<fixture3>`: a manifest and a **real test command whose suite
 asserts something and is green at run start** (a testless fixture would route every
-verdict to PASS (unverified-by-tests) and prove nothing about the gate), plus one
-planted finding a minimal fix can close — the duplicated block from step 2 is enough.
-Commit it, seed it, and audit it, so the ledger carries a real queue.
+verdict to PASS (unverified-by-tests) and prove nothing about the gate), plus **two**
+planted findings a minimal fix can close — the duplicated block from step 2, and a
+second one like it in another pair of files. Commit it, seed it, and audit it, so the
+ledger carries a real queue.
+
+Two, not one, because step 5e resumes this same fixture and needs an entry still `open`
+after this step closes one. Relying on the audit to incidentally raise a second finding
+would make that step's setup depend on a judgment call this playbook does not control.
 
 Then run `playbooks/improve.md` against it with the safety envelope overridden to
 **1 finding**, and assert, in order:
@@ -302,9 +317,10 @@ which nothing else here covers.
 
 ### 6. Delete the fixture
 
-Remove both temp dirs — `<fixture>` and `<fixture2>`. Leaving one behind means the
-next self-test silently runs against a pre-seeded repo and stops testing the seed path
-at all.
+Remove every temp dir this run created — `<fixture>`, `<fixture2>`, and `<fixture3>`.
+Leaving one behind means the next self-test silently runs against a pre-seeded repo and
+stops testing the seed path at all. `<fixture3>` also carries git worktrees and
+`harness/*` branches from step 5b; deleting its directory takes those with it.
 
 ### 7. Fix what the run broke
 

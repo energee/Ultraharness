@@ -17,6 +17,15 @@ assert_grep() {
   if grep -q "$2" "$3"; then pass "$1"; else fail "$1 (pattern not found: $2)"; fi
 }
 
+assert_not_grep() {
+  # assert_not_grep <description> <pattern> <file>
+  if grep -q "$2" "$3"; then
+    fail "$1 (pattern found, expected absent: $2 — $(grep -m1 "$2" "$3"))"
+  else
+    pass "$1"
+  fi
+}
+
 # --- fixture repo ---
 FIXTURE="$(mktemp -d)"
 trap 'rm -rf "$FIXTURE" "$FIXTURE".out*' EXIT
@@ -85,6 +94,19 @@ cp "$FIXTURE/alpha/Zeta.js" "$FIXTURE/beta/Zeta.js"
 echo "export const a = 4;" > "$FIXTURE/alpha/apple.js"
 cp "$FIXTURE/alpha/apple.js" "$FIXTURE/beta/apple.js"
 
+# A seeded harness footprint. Per AGENTS.md it is this harness's own output and is
+# never evidence about the target, so no counted section may quote it. Sized and
+# shaped to break every one of them if it leaks: long enough to top "largest files",
+# 600 TODOs against the fixture's 1, and a basename shared with the root adapter so
+# it would surface as a duplication candidate too. Only the "agents dir:" line, whose
+# whole job is to report presence, may mention it.
+mkdir -p "$FIXTURE/.agents"
+: > "$FIXTURE/.agents/AGENTS.md"
+for i in $(seq 1 600); do
+  echo "seeded line $i — TODO: harness output, not repo evidence" >> "$FIXTURE/.agents/AGENTS.md"
+done
+printf '<!-- harness:begin -->\nSee .agents/AGENTS.md\n<!-- harness:end -->\n' > "$FIXTURE/AGENTS.md"
+
 git -C "$FIXTURE" add -A
 git -C "$FIXTURE" -c user.name=fixture -c user.email=fixture@example.com \
   commit -qm "fixture commit"
@@ -123,6 +145,20 @@ if [ -n "$TODO_COUNT" ] && [ "$TODO_COUNT" -ge 1 ]; then
 else
   fail "todo/fixme markers count >= 1 (got '${TODO_COUNT:-none}')"
 fi
+
+# --- footprint: .agents/ is the harness's output, never the target's evidence ---
+# The counted sections must not quote it. Asserting on the path rather than on a
+# count keeps this honest as the fixture grows: "agents dir:" prints a bare
+# ".agents/", so the full path appearing anywhere means a counted section leaked it.
+assert_not_grep "footprint: .agents/ absent from every counted section" \
+  "\.agents/AGENTS\.md" "$OUT"
+# The count itself, so a leak that somehow avoids printing the path still fails: the
+# footprint carries 600 TODOs and the fixture's own code carries exactly 1.
+assert_grep "footprint: todo count is the target's alone" \
+  "^todo/fixme markers: 1 " "$OUT"
+# ...while presence reporting, which is the one line allowed to mention it, still works.
+assert_grep "footprint: presence still reported" \
+  "^agents dir: \.agents/ present" "$OUT"
 
 # --- gates: fires one lens, withholds the other, on the same repo ---
 assert_grep "gates: idempotency FIRED on the queue consumer" \

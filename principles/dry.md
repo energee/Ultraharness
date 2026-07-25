@@ -43,6 +43,3 @@ two instances is plausible (see below) — extract only what is provably identic
 - Duplication of under 3-4 lines, or duplication that appears only twice with no sign of a
   third occurrence, is usually cheaper to leave than to abstract.
 
-## Finding format
-
-`[<principle>/<severity high|med|low>] <file:line> — <what> — <smallest fix>`

@@ -12,6 +12,8 @@ Rules:
 
 - Promotion: a lesson seen 2+ times gets copied into `conventions.md` or `AGENTS.md`,
   whichever fits — it has graduated from observation to convention.
-- Pruning: stale lessons that never repeat may be pruned during audits.
+- Append-only, like `ledger.md`. A lesson that never repeats is evidence too: it
+  records what one session hit and no other did. Nothing here is pruned or rewritten;
+  a lesson that turns out to be wrong earns a correcting line, not a deletion.
 
 ---

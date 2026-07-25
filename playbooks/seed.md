@@ -89,15 +89,13 @@ read recent `git -C <target> log` output). Rules of evidence:
 Also draft a 2-4 sentence `{{REPO_SUMMARY}}`: what the repo is, its ecosystem
 (from the `detected:` line), and rough size (from the `size:` line).
 
-On a first seed the `size:` line is the target's own size — nothing has been seeded
-yet, so use it as printed. On a re-seed it is not: the script inventories tracked
-files, so it now also counts the seeded footprint — the five `.agents/` files, any
-lens files copied in step 4a, both adapter files, and `.gitignore` if seeding created
-it (up to 8 added files where no gate fired, on a repo that had no `.gitignore` and
-neither adapter file; fewer where any of them already existed, one more per fired
-lens). Do not "correct" the printed number; facts stay the script's. Keep the
-size already recorded in `.agents/AGENTS.md` — it was measured pre-seed — and revise
-it only when the target's own code has changed.
+Use the `size:` line as printed. The script excludes `.agents/` from it, so a re-seed
+measures what a first seed measured — the target's own code — and the number does not
+creep upward just because you seeded. The one residue is at the root: an `AGENTS.md`,
+`CLAUDE.md`, or `.gitignore` that step 5 or 6 *created* is counted like any other file,
+because the footprint rule scopes the exclusion in those files to the delimited block,
+not the file. That is at most three files, and never lines of the target's own code. Do
+not "correct" the printed number either way; facts stay the script's.
 
 ### 4. Instantiate `.agents/`
 
@@ -165,7 +163,7 @@ resolved there (filled if a gate fired, deleted with its section if none did).
 
 ### 4a. Evaluate the lens gates
 
-The four rubrics in `principles.md` are universal. Lenses are not: each one applies only
+The five rubrics in `principles.md` are universal. Lenses are not: each one applies only
 to repos that have the thing it judges. **The script decides which.** Step 1's report
 ends with one `gates:` line per lens:
 

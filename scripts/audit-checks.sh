@@ -14,7 +14,7 @@ set -euo pipefail
 # comparing output byte for byte.
 export LC_ALL=C
 
-RUBRIC_VERSION="v2 (2026-07-25)"
+SCRIPT_VERSION="v2 (2026-07-25)"
 
 TARGET="${1:-}"
 if [ -z "$TARGET" ] || [ ! -d "$TARGET" ]; then
@@ -46,12 +46,13 @@ fi
 
 grep -Ev '(^|/)(node_modules|vendor|dist|build|target|\.next|__pycache__|\.venv|venv)/' "$ALL_FILES" \
   | grep -Ev '(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|poetry\.lock|uv\.lock|Gemfile\.lock|composer\.lock|go\.sum)$' \
+  | grep -Ev '(^|/)\.agents/' \
   > "$CODE_FILES" || true
 
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-echo "audit-checks $RUBRIC_VERSION — target: $TARGET"
+echo "audit-checks $SCRIPT_VERSION — target: $TARGET"
 
 # ---------------------------------------------------------------------------
 # detected: ecosystem, from manifest evidence only
@@ -266,9 +267,9 @@ echo "agents dir: .agents/ $AGENTS_STATE; ledger $LEDGER_STATE"
 # out of the lens files instead of growing a third branch here.
 # ---------------------------------------------------------------------------
 
-# Gates judge the target's own *code*. Three exclusions on top of CODE_FILES, and
-# they are why this belongs in a script rather than in prose:
-#   .agents/          — this harness's own output (footprint rule in AGENTS.md)
+# Gates judge the target's own *code*. CODE_FILES has already dropped the harness
+# footprint per the rule in AGENTS.md; these two exclusions go further, and they are
+# why this belongs in a script rather than in prose:
 #   CHANGELOG, docs/  — prose about the code, not the code
 #   .md/.rst/.txt/.adoc — every lens gate already disclaims matches on the word
 #                       "retry" in prose; excluding the extensions enforces that
@@ -277,7 +278,7 @@ echo "agents dir: .agents/ $AGENTS_STATE; ledger $LEDGER_STATE"
 # That is default-deny, and it is the safe direction: a missing lens is a smaller
 # wrong than a lens seeded into a repo it does not describe.
 GATE_FILES="$TMP/gate-files"
-grep -Ev '(^|/)\.agents/|(^|/)CHANGELOG|(^|/)docs/|\.(md|rst|txt|adoc)$' "$CODE_FILES" > "$GATE_FILES" || true
+grep -Ev '(^|/)CHANGELOG|(^|/)docs/|\.(md|rst|txt|adoc)$' "$CODE_FILES" > "$GATE_FILES" || true
 
 gate_report() {
   # gate_report <lens-slug> <hits-file>
