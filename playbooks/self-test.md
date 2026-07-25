@@ -193,7 +193,10 @@ know the rebuttals, so your behaviour is evidence about your memory, not about t
 prose. If no fresh context is available, skip this step and say so in the report; a
 self-ablation reported as a result is worse than no result.
 
-Pick one row — rotate through them across runs, oldest-untested first. Then:
+Pick one row — rotate through them across runs, oldest-untested first, reading
+`<harness>/docs/ablations.md` to see which have been tested and when. That file is the
+record; without it "oldest-untested" is unanswerable and every run re-tests whatever
+row catches your eye. Then:
 
 1. Copy the playbook to a scratch file with **that one row removed**, everything else
    intact.
@@ -216,8 +219,13 @@ Then judge:
   observation about a real run, so step 7 applies: fix the smallest thing that
   explains it, and consider whether that failure deserves a row.
 
-Ablation results belong in the report, not in the target and not in the playbook —
-except the row edit itself, if two runs justify one.
+Append the result as one row in `<harness>/docs/ablations.md`, and report it. It does
+not go into the target, and it does not go into the playbook — except the row edit
+itself, once two runs justify one.
+
+Note what the run tells you about *where* the constraint lives. If the fresh context
+complied because the workflow body already states the rule, the row is a restatement,
+and restatements are the first thing to cut when a table gets long.
 
 ### 6. Delete the fixture
 
