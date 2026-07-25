@@ -17,6 +17,12 @@ Confirm all of these before proceeding; if any fails, stop and fix it first.
    harness repo itself unless explicitly told to.
 2. The target is seeded: `<target>/.agents/` exists and contains `principles.md` and
    `ledger.md`. If not, run `playbooks/seed.md` first, then return here.
+   **Read-only exception**: if the user asked for an audit without seeding (or the
+   target must not be written to at all), run in read-only mode — announce it up
+   front, read the rubric from `<harness>/templates/agents-dir/principles.md`
+   instead of the target's copy, and write findings to a scratch file the user names
+   instead of a ledger (step 6). Everything else in this playbook is unchanged. Never
+   choose this mode yourself to avoid seeding; it is the user's call.
 3. The fact collector runs clean: from the harness repo root, run
    `scripts/audit-checks.sh <target-path>` and confirm it exits 0 and prints a report
    headed `audit-checks v1 (2026-07-24) — target: <path>`. Exit 2 means the target
@@ -102,6 +108,10 @@ in-progress, or parked) gets its existing entry referenced in your report, not a
 duplicate entry. Mark the top-3 queue by listing the three slugs at the end of your
 appended block.
 
+In read-only mode (probe item 2) there is no ledger: write the same entries, same
+format, same top-3 slugs, to the scratch file instead, and say in the report that
+nothing was written to the target.
+
 ## Stop conditions
 
 - **Script fails** — fix the invocation (path, permissions, working directory) and
@@ -110,8 +120,8 @@ appended block.
 - **Repo too large to judge fully** — if you cannot read all top-10 files and all
   duplication candidates in this session, state the sampled scope explicitly ("judged
   7 of 10 largest files: <list>") in the audit output and the ledger. No silent caps.
-- **Target not seeded and seeding fails** — stop and report why; do not audit an
-  unseeded repo from memory of the rubrics.
+- **Target not seeded and seeding fails** — stop and report why, unless the user
+  asked for read-only mode; do not audit an unseeded repo from memory of the rubrics.
 
 ## Anti-rationalization
 
@@ -122,3 +132,4 @@ appended block.
 | "The duplication candidate is probably real, no need to read both files." | Candidates are best-effort string matches. Read both files or don't flag it. |
 | "No tests, so I'll skip the testing category." | Skipped categories need an absent evidence base that's legitimately absent. Missing tests is a high-severity finding. |
 | "The repo has our `.agents/` dir, that's worth points." | Never. Audits score outcomes only — harness-owned files are never a scored category. |
+| "Seeding is a hassle, I'll just go read-only." | Read-only is the user's call, not your shortcut. Unasked-for, the answer is seed first. |

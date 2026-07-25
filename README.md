@@ -40,7 +40,9 @@ overwritten).
 - The front door (`AGENTS.md`) routes to a playbook by decision, not topic:
   `playbooks/seed.md`, `playbooks/audit.md`, `playbooks/improve.md`,
   `playbooks/verify.md`, `playbooks/self-test.md`.
-- `playbooks/audit.md` produces ranked findings plus a top-actions queue.
+- `playbooks/audit.md` produces ranked findings plus a top-actions queue. Ask for a
+  read-only audit and it writes nothing to your repo — no seeding, findings to a
+  scratch file you name.
 - `playbooks/improve.md` runs a loop — audit → fix → verify → de-sloppify →
   checkpoint — in worktrees under `.agents/worktrees/`.
 - The ledger in `.agents/ledger.md` survives session death, so a run can pick back up

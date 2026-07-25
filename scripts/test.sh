@@ -45,6 +45,17 @@ cat > "$FIXTURE/notes.js" <<'EOF'
 function noop() {}
 EOF
 
+# A planted duplication: same block, same basename, in two directories. Exercises
+# both duplication-candidate branches (shared basename, and >60% shared lines
+# among the largest files) — the script's most intricate logic, and otherwise
+# never run by this harness.
+mkdir -p "$FIXTURE/alpha" "$FIXTURE/beta"
+: > "$FIXTURE/alpha/dup.js"
+for i in $(seq 1 80); do
+  echo "export const dupValue$i = $i;" >> "$FIXTURE/alpha/dup.js"
+done
+cp "$FIXTURE/alpha/dup.js" "$FIXTURE/beta/dup.js"
+
 git -C "$FIXTURE" add -A
 git -C "$FIXTURE" -c user.name=fixture -c user.email=fixture@example.com \
   commit -qm "fixture commit"
@@ -60,6 +71,8 @@ if [ "$RC" -eq 0 ]; then pass "exit code 0 on valid target"; else fail "exit cod
 assert_grep "header contains audit-checks v1" "audit-checks v1" "$OUT"
 assert_grep "detected: node present"          "detected: node" "$OUT"
 assert_grep "largest files lists big.js"      "big.js" "$OUT"
+assert_grep "duplication: shared basename caught" "shared basename 'dup.js'" "$OUT"
+assert_grep "duplication: shared lines caught"    "shared lines: .*dup\.js" "$OUT"
 
 # todo/fixme count >= 1
 TODO_COUNT="$(grep 'todo/fixme markers:' "$OUT" | sed 's/[^0-9]*\([0-9][0-9]*\).*/\1/' || true)"
