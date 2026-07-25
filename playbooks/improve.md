@@ -131,21 +131,31 @@ Three standing rules shape what counts as an improvement:
   artifacts that no longer earn their maintenance cost — including files this
   harness itself seeded — is a first-class fix, ranked by the same
   severity/radius/effort rules as additions.
-  - **Except at a boundary.** Guard precedence (the preamble of
+  - **Except at a boundary.** Guard precedence (the `## Guard precedence` section of
     `<target>/.agents/principles.md`) binds this rule: a guard is not dead because
     nothing in the tree calls it. Framework-dispatched guards — decorators, route
     registrations, middleware, lifecycle hooks — have zero in-tree callers by
     construction. Removing one requires showing the boundary itself is gone.
 - **Irreversible fixes are the human's call.** If the smallest intervention that owns
   the problem would destroy persisted data (dropping a column, table, migration, or
-  serialized field) or remove a guard, do not attempt it. Set the entry to
+  serialized field) or remove a guard, do not attempt it. Moving a guard is not
+  removing one: consolidating duplicated checks into a shared home that every affected
+  boundary still calls is a normal fix, not a park — that is the DRY finding doing its
+  job. Set the entry to
   `parked(authority)` with `attempts: 0/3` and a ruling giving all three fields the
   ledger requires: the gap is `authority`, the evidence is exactly what the fix would
   destroy, and what would unpark it is a human's explicit go-ahead for that specific
   deletion. Until then the entry is not in the queue, whatever its attempts count
   says — `0/3` records a policy park, not an untouched budget to be spent later.
-  Commit the ledger before moving on; this rule exits the pass before step 8, the only
-  step that otherwise commits, and an uncommitted ruling does not survive a checkout.
+  Two arrivals, and they differ. Reaching this rule at **step 2**, nothing has been
+  built yet: there is no worktree and no attempt, so `0/3` is literally true. Reaching
+  it from a **step 5 guard FAIL**, a worktree and real attempts exist: keep the
+  attempts count as it stands rather than rewriting it to `0/3` — the ledger's history
+  is the point — and revert the worktree as the failure path does, unless this is the
+  baseline finding, whose worktree that path deliberately keeps.
+  Commit the ledger on the base branch before moving on; this rule can exit the pass
+  before step 8, the only step that otherwise commits it, and an uncommitted ruling
+  does not survive a checkout.
   Then move to the next finding and the run continues — unless this is the baseline
   finding (readiness step 5's #1), which stops the run per Hard stops. This loop merges
   unattended and `playbooks/verify.md` cannot prove a deletion was safe, so the one
@@ -191,7 +201,9 @@ completion claim without it. Both PASS forms are non-FAIL: carry on to step 6, a
 record the qualifier verbatim in the ledger `delta` so the run's evidence level is
 never overstated. On FAIL, iterate on the fix (never on the test), increment
 `attempts: <n>/3` in the ledger, and return to step 4. After 3 failed attempts, take
-the failure path below.
+the failure path below. One FAIL is not iterable: a guard-precedence FAIL, where the
+fix *is* the deletion, so retrying produces the same verdict three times — route that
+one to step 2's irreversible-fixes rule instead of incrementing.
 
 ### 6. De-sloppify
 

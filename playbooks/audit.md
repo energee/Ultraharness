@@ -66,8 +66,10 @@ you need the reasoning behind a rule). Then:
 - Apply all four rubrics (DRY, KISS, SOLID, YAGNI), including each rubric's
   "do NOT apply when" exclusions, and the `## Guard precedence` section that governs
   all four: never emit a removal finding against a guard on a zero-reference argument.
-  That section is upstream of this one — a finding you do not raise here cannot be
-  acted on later.
+  That section is upstream of this step — a finding you do not raise here cannot be
+  acted on later. It has no long-form counterpart in the harness's `principles/`
+  directory: unlike the four rubrics it has nothing to detect, so the condensed
+  statement is the whole rule.
 
 Emit every finding in exactly this format:
 

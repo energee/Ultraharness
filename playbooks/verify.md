@@ -78,8 +78,10 @@ Then read the diff's deletions against that file's `## Guard precedence` section
 this change remove or weaken validation, an authorization check, an error branch, a
 timeout, a bound, a cleanup path, a transaction wrapper, or a version pin? If it does,
 the verdict is **FAIL** unless the diff also shows the boundary itself is gone, or the
-same check moved intact to a shared home the boundary still calls — consolidating five
-copies into one deletes four and weakens nothing. "It had no callers" is not that
+same check moved intact to a shared home that *every* boundary which had it now calls —
+consolidating five copies into one deletes four and weakens nothing, but only if all
+five sites still run the check. Confirm each one in the diff; four rewired and one left
+bare is a removal wearing a refactor's clothes. "It had no callers" is not that
 showing; framework-dispatched guards never do. The evidence for this verdict is the
 deleted hunk itself, quoted — it is a reading check, so no command output backs it.
 
