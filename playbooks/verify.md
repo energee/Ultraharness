@@ -84,6 +84,17 @@ YAGNI and KISS: did the fix itself introduce speculative structure (an abstracti
 with one caller, a config knob nothing sets, a "for future use" seam)? A fix that
 adds new findings is not done.
 
+Then read the diff's deletions against that file's `## Guard precedence` section: does
+this change remove or weaken validation, an authorization check, an error branch, a
+timeout, a bound, a cleanup path, a transaction wrapper, or a version pin? If it does,
+the verdict is **FAIL** unless the diff also shows the boundary itself is gone, or the
+same check moved intact to a shared home that *every* boundary which had it now calls —
+consolidating five copies into one deletes four and weakens nothing, but only if all
+five sites still run the check. Confirm each one in the diff; four rewired and one left
+bare is a removal wearing a refactor's clothes. "It had no callers" is not that
+showing; framework-dispatched guards never do. The evidence for this verdict is the
+deleted hunk itself, quoted — it is a reading check, so no command output backs it.
+
 ### 5. Verdict
 
 Write one of three verdicts — **PASS**, **PASS (unverified-by-tests)**, or **FAIL**
@@ -104,6 +115,11 @@ status, failure names). A verdict with no quoted output is invalid; redo the run
 - **FAIL** on anything else, listing exactly what failed and the output proving it.
   A recorded test command that ran and failed is always FAIL — the qualified PASS is
   only for a repo with no test command at all.
+
+A FAIL raised by that guard check is the one FAIL the caller must not iterate on: the
+fix *is* the deletion, so three attempts produce the same verdict three times. It is a
+policy park under `playbooks/improve.md` step 2's irreversible-fixes rule — hand it
+back as `parked(authority)` at `attempts: 0/3`, not as a spent budget.
 
 **Rule: on FAIL, the fix iterates — never the test.** Weakening, skipping, or
 deleting a test to get to PASS is falsifying the evidence this gate exists to
@@ -138,3 +154,4 @@ its own evidence — not something to slip into a verification pass.
 | "No test suite here, so I'll just write PASS" | Write PASS (unverified-by-tests). A bare PASS claims evidence you do not have. |
 | "AGENTS.md records `none`, so there is nothing to run" | Check the diff first. If this change adds tests, the record is stale and this change is what made it stale — run the new suite and give a real verdict. |
 | "This test is flaky/wrong, I'll just relax it so we pass" | On FAIL the fix iterates, never the test. A wrong test is its own finding, raised separately with evidence. |
+| "The fix deletes an unused guard — that is just cleanup" | Check the diff against guard precedence. Unused is not the test; boundary-gone is. If the boundary stands, that is a FAIL. |

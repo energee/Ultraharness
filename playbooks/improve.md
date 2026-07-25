@@ -132,12 +132,43 @@ owns the problem — the earliest point in the causal chain where one change fix
 not the broadest refactor that would also fix it. Update its ledger entry to
 `status: in-progress` before doing anything else.
 
-Two standing rules shape what counts as an improvement:
+Three standing rules shape what counts as an improvement:
 
 - **Removal earns equal rank.** Deleting code, dependencies, dead config, or harness
   artifacts that no longer earn their maintenance cost — including files this
   harness itself seeded — is a first-class fix, ranked by the same
   severity/radius/effort rules as additions.
+  - **Except at a boundary.** Guard precedence (the `## Guard precedence` section of
+    `<target>/.agents/principles.md`) binds this rule: a guard is not dead because
+    nothing in the tree calls it. Framework-dispatched guards — decorators, route
+    registrations, middleware, lifecycle hooks — have zero in-tree callers by
+    construction. Removing one requires showing the boundary itself is gone.
+- **Irreversible fixes are the human's call.** If the smallest intervention that owns
+  the problem would destroy persisted data (dropping a column, table, migration, or
+  serialized field) or remove a guard, do not attempt it. Moving a guard is not
+  removing one: consolidating duplicated checks into a shared home that every affected
+  boundary still calls is a normal fix, not a park — that is the DRY finding doing its
+  job.
+
+  Park it `parked(authority)`, with the three fields the ledger requires: gap
+  `authority`; evidence, exactly what the fix would destroy; unpark condition, a
+  human's explicit go-ahead for that specific deletion. Until then the entry is not in
+  the queue, whatever its attempts count says.
+
+  The attempts count depends on how you got here. At **step 2** nothing has been built
+  yet — no worktree, no attempt — so record `attempts: 0/3`, and note that this is a
+  policy park, not an untouched budget for a later run to spend. Arriving from a
+  **step 5 guard FAIL**, a worktree and real attempts exist: leave the count as it
+  stands rather than resetting it, and revert the worktree as the failure path does —
+  unless this is the baseline finding, whose worktree that path deliberately keeps.
+
+  Commit the ledger on the base branch before moving on: this rule can exit the pass
+  before step 8, which would otherwise be what commits it, and an uncommitted ruling
+  does not survive a checkout. Then move to the next finding and the run continues —
+  unless this is the baseline finding (readiness step 5's #1), which stops the run per
+  Hard stops. This loop merges unattended and `playbooks/verify.md` cannot prove a
+  deletion was safe, so the one class of fix `git revert` cannot undo is the one class
+  a human decides.
 - **Docs travel with the change.** Update stale comments, docstrings, and docs that
   reference the changed behavior in the same change, per finding — never deferred to
   a cleanup pass.
@@ -179,7 +210,9 @@ completion claim without it. Both PASS forms are non-FAIL: carry on to step 6, a
 record the qualifier verbatim in the ledger `delta` so the run's evidence level is
 never overstated. On FAIL, iterate on the fix (never on the test), increment
 `attempts: <n>/3` in the ledger, and return to step 4. After 3 failed attempts, take
-the failure path below.
+the failure path below. One FAIL is not iterable: a guard-precedence FAIL, where the
+fix *is* the deletion, so retrying produces the same verdict three times — route that
+one to step 2's irreversible-fixes rule instead of incrementing.
 
 ### 6. De-sloppify
 
@@ -379,6 +412,8 @@ failed run — retry before concluding anything about capability.
 | --- | --- |
 | "The baseline is only a little red." | The gate holds. Red baseline = finding #1, fixed first. Nothing else starts before it. |
 | "The suite is still red, so I'll open a fresh red-baseline finding." | One per target, ever. A parked `red-baseline` is the hard stop, not a new entry with a new 0/3 budget. |
+| "Nothing references this validator, so it is dead code." | Framework-dispatched guards never have in-tree callers. Removal at a boundary needs the boundary gone, not the symbol uncalled. |
+| "This column is obviously dead, and a human can always revert it." | They cannot — dropped rows do not come back. Irreversible fixes park for a human; that is step 2's third standing rule. |
 | "I'll batch five findings in one worktree." | One finding, one worktree, one verify. Batching makes failures unattributable and reverts impossible. |
 | "De-sloppify is overhead on a small diff." | It runs. On a small diff it's cheap; on any diff it's where the slop hides. |
 | "I'm close — one more attempt past 3 will crack it." | Park it with a gap ruling. The 4th attempt is what the next run, with fresh context, is for. |

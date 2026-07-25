@@ -60,12 +60,18 @@ you need the reasoning behind a rule). Then:
   named only from `.agents/` has zero real callers, because the mention is your own
   note about the repo, not the repo.
 - Apply all four rubrics (DRY, KISS, SOLID, YAGNI), including each rubric's
-  "do NOT apply when" exclusions.
+  "do NOT apply when" exclusions, and the `## Guard precedence` section that governs
+  all four: never emit a removal finding against a guard on a zero-reference argument.
+  That section is upstream of this step — a finding you do not raise here cannot be
+  acted on later. It has no long-form counterpart in the harness's `principles/`
+  directory: unlike the four rubrics it has nothing to detect, so the condensed
+  statement is the whole rule.
 - Read `<target>/.agents/lenses/*.md` if that directory exists, and apply each lens
   alongside the four — same severity anchors, same ranking rules, same "do NOT apply
-  when" discipline. A lens is in that directory because its gate fired at seed time:
-  **a lens that is present applies.** There is no second judgment call here — do not
-  re-run its gate, and do not decide a present lens is a poor fit. If you believe a
+  when" discipline, and the same guard precedence, which binds a lens finding exactly
+  as it binds a rubric one. A lens is in that directory because its gate fired at seed
+  time: **a lens that is present applies.** There is no second judgment call here — do
+  not re-run its gate, and do not decide a present lens is a poor fit. If you believe a
   lens no longer belongs, say so in the report; removal happens through a re-seed and
   the user's decision, never mid-audit. In read-only mode there is no seeded
   `.agents/`, so there are no lenses: audit against the four rubrics only, and say in

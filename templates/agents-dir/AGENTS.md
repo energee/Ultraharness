@@ -21,8 +21,9 @@ observation of this codebase — match them before inventing your own.
 
 ## Principles
 
-`principles.md` is the condensed rubric (DRY, KISS, SOLID, YAGNI) used to spot and
-rank code-quality findings here. Read it before auditing or improving anything.
+`principles.md` is the condensed rubric (DRY, KISS, SOLID, YAGNI, plus the guard
+precedence that governs every rubric and lens) used to spot and rank code-quality
+findings here. Read it before auditing or improving anything.
 
 <!-- seed.md: replace the placeholder below with one line per lens whose gate fired —
      fired lenses only; a lens that did not fire is reported to the user, never
