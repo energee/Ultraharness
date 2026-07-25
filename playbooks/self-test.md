@@ -57,6 +57,10 @@ verifying the test command by running it. Then assert the exact footprint:
 - `<fixture>/AGENTS.md` and `<fixture>/CLAUDE.md` exist and each carry one pointer
   block.
 - `<fixture>/.gitignore` covers `.agents/worktrees/`.
+- The seeded files are actually tracked: `git -C <fixture> ls-files .agents/` lists
+  all five files. Porcelain alone cannot catch this — a `.gitignore` covering
+  `.agents/` makes `git add` skip it silently and porcelain never mentions ignored
+  files, so both weaker assertions below would pass on a seed that committed nothing.
 - A commit `Seed .agents/ harness` exists in the fixture's log, and
   `git -C <fixture> status --porcelain` shows nothing seeded left unstaged.
 
@@ -111,6 +115,14 @@ cannot name the observation, you are editing on taste and the edit does not go i
 Docs travel with the fix: if the behavior you changed is described in `README.md`,
 `AGENTS.md`, or another playbook, update those in the same change.
 
+## Not covered
+
+This playbook exercises `seed.md` and `audit.md` end to end against a real fixture.
+It does **not** run `improve.md` or `verify.md` — no fix loop, no worktree, no
+verdict is executed here, so nothing here is evidence about those two. A green
+self-test means the seed and audit paths work; it says nothing about the improve
+loop.
+
 ## Stop conditions
 
 - **`scripts/test.sh` fails**: stop at step 1. A red script harness makes every fact
@@ -123,6 +135,9 @@ Docs travel with the fix: if the behavior you changed is described in `README.md
   improvise a substitute step and count the run as passing.
 - **The fixture cannot be created** (no temp dir, no git): stop at step 2. Never fall
   back to seeding a real repo to keep the self-test moving.
+- **On any stop above** — record what stopped the self-test and what would unblock
+  it: in `<fixture>/.agents/ledger.md` if the fixture got far enough to have one,
+  otherwise in the report to the user. Delete the fixture either way (step 6).
 
 ## Anti-rationalization table
 

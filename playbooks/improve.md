@@ -1,4 +1,4 @@
-# Playbook: improve
+# improve.md — the long-runtime fix loop
 
 The long-runtime loop: audit the target, then work the findings queue one at a time —
 isolate, fix minimally, verify, de-sloppify, checkpoint — until the queue is empty or
@@ -13,19 +13,25 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
 1. You have a target repo path. If none was given, ask for one.
 2. The target is seeded: `<target>/.agents/` exists with `ledger.md`,
    `principles.md`, and `conventions.md`. If not, run `playbooks/seed.md` first.
-3. Read the ledger top to bottom. Entries with status `in-progress` mean a previous
+3. **Base branch.** The base branch for this run is the branch the target has checked
+   out at run start — read it and record it in the ledger as a
+   `- base branch: <name>` line alongside this run's entries. Every branch below is
+   cut from it and merged back into it. Never substitute `main`/`master` for it, and
+   never switch the target's checkout.
+4. Read the ledger top to bottom. Entries with status `in-progress` mean a previous
    run died mid-finding — resume those first (see Workflow step 1). Never start
    fresh work while an `in-progress` entry sits unexamined.
-4. **Clean-baseline gate.** Run the target's test suite (the test command from
+5. **Clean-baseline gate.** Run the target's test suite (the test command from
    `<target>/.agents/AGENTS.md`). A red baseline does not block the run; it becomes
    finding #1, ranked above everything else, and is fixed first so every later
    failure is attributable to a change, not to the starting state. Record the
    baseline result (pass/fail, quoted summary line) before touching anything.
-   - If `.agents/AGENTS.md` records `none verified` for tests, proceed: the missing
-     test suite IS finding #1, and until it's fixed `playbooks/verify.md` will mark
-     changes "unverifiable by tests" per its own probe — that's the honest verdict,
-     not a blocker.
-   - Only a `.agents/AGENTS.md` that records no test entry at all (not even
+   - If `.agents/AGENTS.md` records `none verified` or `none` for tests, proceed:
+     both mean the same thing here — there is no test suite to run. The missing test
+     suite IS finding #1, and until it's fixed `playbooks/verify.md` returns
+     **PASS (unverified-by-tests)** per its own §5 — that verdict is not a FAIL and
+     does not count toward the 3-attempt limit.
+   - Only a `.agents/AGENTS.md` that records no test entry at all (neither `none` nor
      `none verified`) means seeding is incomplete — run `playbooks/seed.md` first.
 
 ## Workflow
@@ -36,9 +42,10 @@ Loop the following. One pass = one finding.
 
 - If the ledger has `open` or `in-progress` entries, that is your queue — do not
   re-audit first. An `in-progress` entry is resumed at whatever step its worktree
-  and attempts count indicate: if its worktree `.agents/worktrees/<finding-slug>/`
-  exists, first check whether its branch is already merged into the default branch
-  (a run that died between merge and cleanup) — if merged, jump to step 7's ledger
+  and attempts count indicate: if its worktree
+  `<target>/.agents/worktrees/<finding-slug>/` exists, first check whether its
+  branch is already merged into the base branch (a run that died between merge and
+  cleanup) — if merged, jump to step 7's ledger
   update; otherwise inspect the diff there and continue from fix or verify. If no
   worktree exists, treat it as `open` and restart the pass (increment nothing —
   attempts count only completed fix attempts).
@@ -65,9 +72,10 @@ Two standing rules shape what counts as an improvement:
 
 ### 3. Isolate
 
-Create a worktree for this one finding at `.agents/worktrees/<finding-slug>/` on a
-new branch `harness/<finding-slug>`, branched from the target's current default
-branch. One finding, one worktree, one branch. All fix work happens inside it.
+Create a worktree for this one finding at
+`<target>/.agents/worktrees/<finding-slug>/` on a new branch
+`harness/<finding-slug>`, branched from the run's base branch (readiness step 3).
+One finding, one worktree, one branch. All fix work happens inside it.
 
 ### 4. Fix
 
@@ -78,10 +86,13 @@ change approach without recording the pivot in the ledger entry.
 
 ### 5. Verify
 
-Run `playbooks/verify.md` inside the worktree. It yields a PASS or FAIL verdict
-backed by quoted command output — no completion claim without it. On FAIL, iterate
-on the fix (never on the test), increment `attempts: <n>/3` in the ledger, and
-return to step 4. After 3 failed attempts, take the failure path below.
+Run `playbooks/verify.md` inside the worktree. It yields **PASS**,
+**PASS (unverified-by-tests)**, or **FAIL**, backed by quoted command output — no
+completion claim without it. Both PASS forms are non-FAIL: carry on to step 6, and
+record the qualifier verbatim in the ledger `delta` so the run's evidence level is
+never overstated. On FAIL, iterate on the fix (never on the test), increment
+`attempts: <n>/3` in the ledger, and return to step 4. After 3 failed attempts, take
+the failure path below.
 
 ### 6. De-sloppify
 
@@ -94,9 +105,9 @@ diff line by line and simplify. If de-sloppifying changed anything, run verify a
 
 ### 7. Merge back
 
-Merge the branch into the target's default branch. If the merge conflicts with work
-from an earlier pass, resolve it now, re-verify, then merge — never leave a finding
-stranded on its branch. Then, BEFORE deleting the worktree, update the ledger entry:
+Merge the branch into the run's base branch. If the merge conflicts with work from an
+earlier pass, resolve it now, re-verify, then merge — never leave a finding stranded
+on its branch. Then, BEFORE deleting the worktree, update the ledger entry:
 `status: done`, final `attempts`, and `delta` with before/after evidence (e.g.
 `dup blocks 14 → 9; tests green` — quote real output, not recollection). The ledger
 must never claim less than reality: a run that dies between merge and ledger write
@@ -108,6 +119,10 @@ says `done`, delete the worktree and the branch.
 
 - Make a checkpoint commit in the target (the merged fix plus the ledger update).
   No Co-Authored-By lines.
+- If this pass taught something a future session in this repo would need — a
+  convention the fix had to follow, a trap that cost an attempt — append one line to
+  `<target>/.agents/learnings.md` in that file's format, incrementing `seen` on an
+  existing line rather than adding a duplicate. Nothing learned, nothing written.
 - Report scope remaining: findings done this run, findings still open, envelope
   budget left. On multi-hour runs, pause here for a user checkpoint between phases
   before continuing.
@@ -143,14 +158,19 @@ capability.
 
 - `.agents/AGENTS.md` records no test entry at all, or the recorded test command
   errors before running any test (command not found, harness crash) → stop; that is
-  a seeding gap, report it. A recorded `none verified` is NOT this stop — it
-  proceeds with missing tests as finding #1 (readiness step 4).
+  a seeding gap, report it. A recorded `none` or `none verified` is NOT this stop —
+  it proceeds with missing tests as finding #1 (readiness step 5).
+- The baseline finding (readiness step 5's finding #1) parked → stop the run. No
+  later fix can be verified against a red suite, so continuing would park every
+  remaining finding on the same cause. Write the ledger and report it.
 - Verify itself is broken (the harness's gate, not the target's tests) → stop and
   report; do not self-certify fixes.
-- The target's default branch moved underneath you in ways you cannot cleanly merge
+- The run's base branch moved underneath you in ways you cannot cleanly merge
   → stop, write the ledger, report the conflict.
+- **On any stop above** — append one ledger entry recording what stopped the run and
+  what would unblock it before reporting to the user.
 
-## Anti-rationalization
+## Anti-rationalization table
 
 | Excuse | Rebuttal |
 | --- | --- |

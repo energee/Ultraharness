@@ -181,7 +181,11 @@ awk -F/ '{ print $NF "\t" $0 }' "$CODE_FILES" \
   | sort > "$TMP/basenames" || true
 cut -f1 "$TMP/basenames" | uniq -d > "$TMP/dup-names" || true
 while IFS= read -r name; do
-  PATHS="$(grep "^$name	" "$TMP/basenames" | cut -f2 | tr '\n' ' ' || true)"
+  # awk field match, not grep: a basename can contain regex metacharacters, and
+  # grep would interpret them — "a.b.js" as a pattern also matches "axb.js", so a
+  # grep lookup emits paths that do not share the basename. audit.md quotes this
+  # report verbatim as fact, so a wrong path here becomes a wrong fact in a report.
+  PATHS="$(awk -F'\t' -v n="$name" '$1 == n { print $2 }' "$TMP/basenames" | tr '\n' ' ' || true)"
   echo "  shared basename '$name': $PATHS" >> "$DUP_OUT"
 done < "$TMP/dup-names"
 

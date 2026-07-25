@@ -28,7 +28,7 @@ Seeding writes one directory, `.agents/`, into the target repo:
   principles.md           # condensed rubric (self-contained; no dependency on harness repo)
   ledger.md               # progress ledger — survives compaction and session death
   learnings.md            # repeated lessons, promoted after corroboration
-  worktrees/              # gitignored; improvement-run worktrees, visible to all CLIs
+  worktrees/              # gitignored; created on the first improve run, not by seeding
 ```
 
 `AGENTS.md` and `CLAUDE.md` at the target repo's root become thin pointers into
@@ -47,6 +47,13 @@ overwritten).
   checkpoint — in worktrees under `.agents/worktrees/`.
 - The ledger in `.agents/ledger.md` survives session death, so a run can pick back up
   cold.
+
+## Testing the harness itself
+
+Run `bash scripts/test.sh` from this repo's root — the bash tests for
+`scripts/audit-checks.sh`. Every assertion prints `PASS` and the run exits 0.
+For the full end-to-end check (seed and audit run against a throwaway fixture repo),
+point an agent at `playbooks/self-test.md`.
 
 See `docs/specs/` for the full design and `docs/research/` for the reference-project
 research behind it.

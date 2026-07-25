@@ -1,13 +1,13 @@
-# Playbook: audit
+# audit.md — rank a target repo's findings against the rubrics
 
 Assess a target repo's health: collect facts with the script, judge them against the
 principles rubrics, and produce ALL findings ranked plus a top-actions queue, written
 to the target's `.agents/ledger.md`. Facts come from the script; judgment comes from
 you; the two never blur.
 
-Audits score repo outcomes only — tests, duplication, dead code, teachability. The
+Audits judge repo outcomes only — tests, duplication, dead code, teachability. The
 presence or absence of harness-owned files (`.agents/`, this repo's playbooks) is
-never a scored category.
+never a finding.
 
 ## Readiness probe
 
@@ -17,23 +17,25 @@ Confirm all of these before proceeding; if any fails, stop and fix it first.
    harness repo itself unless explicitly told to.
 2. The target is seeded: `<target>/.agents/` exists and contains `principles.md` and
    `ledger.md`. If not, run `playbooks/seed.md` first, then return here.
-   **Read-only exception**: if the user asked for an audit without seeding, or the
-   user said the target must not be written to, run in read-only mode — announce it
-   up front, read the rubric from `<harness>/templates/agents-dir/principles.md`
+   **Read-only exception**: if the user explicitly declined seeding, or said the
+   target must not be written to, run in read-only mode — announce it up front, read
+   the rubric from `<harness>/templates/agents-dir/principles.md`
    instead of the target's copy, and write findings to a scratch file the user names
    instead of a ledger (step 6). Everything else in this playbook is unchanged. Never
    choose this mode yourself to avoid seeding; it is the user's call.
 3. The fact collector runs clean: from the harness repo root, run
-   `scripts/audit-checks.sh <target-path>` and confirm it exits 0 and prints a report
-   headed `audit-checks v1 (2026-07-24) — target: <path>`. Exit 2 means the target
-   path is invalid — fix the path, not the script.
+   `bash scripts/audit-checks.sh <target-path>` and confirm it exits 0 and prints a
+   report whose first line starts `audit-checks v` and names the target path. Do not
+   pin the version or date — the script owns those. Exit 2 means the target path is
+   invalid — fix the path, not the script.
 
 ## Workflow
 
 ### 1. Collect facts
 
-Run `scripts/audit-checks.sh <target-path>` from the harness repo root and quote its
-full report verbatim into your audit output. The facts are the script's, not yours:
+Run `bash scripts/audit-checks.sh <target-path>` from the harness repo root and quote
+its full report verbatim into your audit output. The facts are the script's, not
+yours:
 never re-derive, round, "correct", or summarize-away a number it printed. If a fact
 looks wrong, say so as a finding — but still quote the script's output unchanged.
 
@@ -50,12 +52,13 @@ you need the reasoning behind a rule). Then:
   `<!-- harness:begin -->` pointer blocks in the target's root `AGENTS.md` /
   `CLAUDE.md`. On a seeded repo they dominate both lists (the two pointer files are
   ~100% identical by construction). Still quote them in the script's report; just
-  never score them. What is excluded is the block, not the file: a root `AGENTS.md`
-  or `CLAUDE.md` that also carries the target's own content is still scored on that
-  content — skip only the delimited block. Skip such a file whole only when the block
-  is all it contains. The same exclusion applies when you count references to decide
-  whether something is unused: a symbol or file named only from `.agents/` has zero
-  real callers, because the mention is your own note about the repo, not the repo.
+  never make them a finding. What is excluded is the block, not the file: a root
+  `AGENTS.md` or `CLAUDE.md` that also carries the target's own content is still
+  judged on that content — skip only the delimited block. Skip such a file whole only
+  when the block is all it contains. The same exclusion applies when you count
+  references to decide whether something is unused: a symbol or file named only from
+  `.agents/` has zero real callers, because the mention is your own note about the
+  repo, not the repo.
 - Apply all four rubrics (DRY, KISS, SOLID, YAGNI), including each rubric's
   "do NOT apply when" exclusions.
 
@@ -65,17 +68,19 @@ Emit every finding in exactly this format:
 
 ### 3. Teachability judgment
 
-Attempt to state the target's build, test, and run commands using only files in the
-repo (README, manifests, Makefile, CI config — anything committed). Cross-check
+Attempt to state the target's build, test, and typecheck commands using only files in
+the repo (README, manifests, Makefile, CI config — anything committed). Cross-check
 against the script's `commands:` and `teachability:` lines. Every gap — a command you
 could not determine, a README that lies, a setup step that exists only in someone's
 head — is a finding. Use `teachability` as the principle slot in the finding format.
 
 ### 4. Rank everything
 
-Rank ALL findings by, in order: severity (high > med > low), then blast radius (how
-much of the repo the problem touches or infects), then effort (cheaper fixes rank
-higher at equal severity and radius). Report every finding in ranked order. Never
+Grade severity by the anchors in `<target>/.agents/principles.md` ("Severity
+anchors", just under the finding format) — not by feel. Then rank ALL findings by, in
+order: severity (high > med > low), then blast radius (how much of the repo the
+problem touches or infects), then effort (cheaper fixes rank higher at equal severity
+and radius). Report every finding in ranked order. Never
 suppress, threshold, or "top N" the list — a minor finding is ranked low, not omitted.
 
 Conditional applicability: categories with no evidence base are skipped, not scored —
@@ -93,7 +98,7 @@ This is the queue `playbooks/improve.md` consumes.
 ### 6. Write the ledger
 
 Append each finding to `<target>/.agents/ledger.md` as an `open` entry, newest at the
-bottom, in exactly the ledger's entry format:
+bottom, in exactly the ledger's entry format, with `<date>` as ISO `YYYY-MM-DD`:
 
 ```
 ## <date> <finding-slug>
@@ -121,9 +126,12 @@ nothing was written to the target.
   duplication candidates in this session, state the sampled scope explicitly ("judged
   7 of 10 largest files: <list>") in the audit output and the ledger. No silent caps.
 - **Target not seeded and seeding fails** — stop and report why, unless the user
-  asked for read-only mode; do not audit an unseeded repo from memory of the rubrics.
+  explicitly declined seeding or said the target must not be written to; do not audit
+  an unseeded repo from memory of the rubrics.
+- **On any stop** — if a ledger exists, append one entry recording what stopped the
+  audit and what would unblock it; then report the same to the user.
 
-## Anti-rationalization
+## Anti-rationalization table
 
 | Excuse | Rebuttal |
 | --- | --- |
@@ -131,5 +139,6 @@ nothing was written to the target.
 | "I'll estimate the line counts / re-derive the facts myself." | Script only. If the script can't produce a fact, its absence is stated — never your estimate. |
 | "The duplication candidate is probably real, no need to read both files." | Candidates are best-effort string matches. Read both files or don't flag it. |
 | "No tests, so I'll skip the testing category." | Skipped categories need an absent evidence base that's legitimately absent. Missing tests is a high-severity finding. |
-| "The repo has our `.agents/` dir, that's worth points." | Never. Audits score outcomes only — harness-owned files are never a scored category. |
-| "Seeding is a hassle, I'll just go read-only." | Read-only is the user's call, not your shortcut. Unasked-for, the answer is seed first. |
+| "The repo has our `.agents/` dir, that's worth points." | Never. Audits judge outcomes only — harness-owned files are never a finding. |
+| "Seeding is a hassle, I'll just go read-only." | Read-only needs an explicit refusal from the user, not your inference. Unasked-for, the answer is seed first. |
+| "Everything here is low severity." | Grade against the severity anchors in `principles.md`. Absent tests and broken correctness are high, whatever the fix costs. |

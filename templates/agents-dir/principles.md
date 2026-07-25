@@ -4,6 +4,14 @@ Use these to spot and rank code-quality findings. Every finding uses this format
 
 `[<principle>/<severity high|med|low>] <file:line> — <what> — <smallest fix>`
 
+Severity anchors — grade against these, not against how expensive the fix looks:
+
+- **high** — breaks correctness, blocks a contributor from building/testing/shipping,
+  or names an absent evidence base that should exist (no tests, no runnable build).
+- **med** — costs maintenance across the repo (duplication with several copies, a
+  seam several modules depend on), or a wrong fact in a README, doc, or report.
+- **low** — localized or cosmetic: one file, one call site, no reader misled.
+
 ## DRY — one authoritative home per piece of knowledge
 
 Spot it:

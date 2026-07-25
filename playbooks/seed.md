@@ -26,7 +26,7 @@ what is missing.
 
 ### 1. Gather facts
 
-Run `scripts/audit-checks.sh <target>` from the harness repo root. Keep the full
+Run `bash scripts/audit-checks.sh <target>` from the harness repo root. Keep the full
 output — you will use its `detected:`, `commands:`, `git:`, and `teachability:` lines
 below. Note: its `commands:` line is *discovered, not run* — treat those as
 candidates, not verified answers.
@@ -75,10 +75,11 @@ Also draft a 2-4 sentence `{{REPO_SUMMARY}}`: what the repo is, its ecosystem
 On a first seed the `size:` line is the target's own size — nothing has been seeded
 yet, so use it as printed. On a re-seed it is not: the script inventories tracked
 files, so it now also counts the seeded footprint — the five `.agents/` files, both
-adapter files, and `.gitignore` if seeding created it (8 added files on a repo that
-had no `.gitignore`, 7 on one that did). Do not "correct" the printed number; facts
-stay the script's. Keep the size already recorded in `.agents/AGENTS.md` — it was
-measured pre-seed — and revise it only when the target's own code has changed.
+adapter files, and `.gitignore` if seeding created it (up to 8 added files, on a repo
+that had no `.gitignore` and neither adapter file; fewer where any of them already
+existed). Do not "correct" the printed number; facts stay the script's. Keep the
+size already recorded in `.agents/AGENTS.md` — it was measured pre-seed — and revise
+it only when the target's own code has changed.
 
 ### 4. Instantiate `.agents/`
 
@@ -124,17 +125,29 @@ For each of `<target>/AGENTS.md` and `<target>/CLAUDE.md`:
 
 ### 6. Gitignore the worktrees dir
 
-Read `<target>/.gitignore`. If it does not already cover `.agents/worktrees/`,
+First check that the target does not already ignore the whole `.agents/` directory:
+run `git -C <target> check-ignore -v .agents/AGENTS.md`. If it reports a matching
+rule, stop and tell the user — an ignored `.agents/` means step 7's `git add` will
+silently skip everything this playbook wrote and the seed will never be committed.
+The user must remove or narrow that rule before seeding can complete.
+
+Then read `<target>/.gitignore`. If it does not already cover `.agents/worktrees/`,
 append a line `.agents/worktrees/` (create `.gitignore` if absent). If it already
 covers it, change nothing.
 
 ### 7. Commit
 
-On the target's **current branch** (do not create branches or switch), stage exactly
-what this playbook wrote — `.agents/`, the adapter files, `.gitignore` — and commit
-with the message `Seed .agents/ harness`. Do not add a Co-Authored-By line. Then run
-`git -C <target> status --porcelain` and confirm none of the seeded files remain
-unstaged.
+On the branch the target has checked out at run start (do not create branches or
+switch), stage exactly what this playbook wrote — `.agents/`, the adapter files,
+`.gitignore` — and commit with the message `Seed .agents/ harness`. Do not add a
+Co-Authored-By line. Then run `git -C <target> status --porcelain` and confirm none
+of the seeded files remain unstaged. Also confirm the seeded files are tracked:
+`git -C <target> ls-files .agents/` must list all five.
+
+Caveat on the acknowledged-dirty-tree path (probe item 4): if the user already had
+uncommitted edits to a root `AGENTS.md` or `CLAUDE.md`, staging that file stages
+their edits too. Say so before committing and let the user decide — stage the file,
+or leave the pointer block uncommitted and report it.
 
 On a re-seed that found nothing stale there is nothing to stage, and `git commit`
 will exit nonzero saying so. That is the idempotent success case, not a failure:
@@ -153,6 +166,11 @@ touch a file just to have something to commit.
   nothing else.
 - **Templates missing or unreadable**: stop and report; do not improvise a
   `.agents/` layout from memory.
+- **`.agents/` is gitignored in the target** (step 6): stop and report the matching
+  rule; a seed that cannot be committed is not a seed.
+- **On any stop above** — if `<target>/.agents/ledger.md` already exists, append one
+  entry recording what stopped the seed and what would unblock it, then report the
+  same to the user.
 
 ## Anti-rationalization table
 

@@ -5,7 +5,7 @@ Findings and their status, across sessions. Append entries; newest at the bottom
 ## Entry format
 
 ```
-## <date> <finding-slug>
+## <date: ISO YYYY-MM-DD> <finding-slug>
 - finding: [<principle>/<severity>] <file:line> — <what>
 - status: open | in-progress | done | parked(<gap: context|capability|authority|proof|feedback>)
 - attempts: <n>/3

@@ -19,7 +19,7 @@ assert_grep() {
 
 # --- fixture repo ---
 FIXTURE="$(mktemp -d)"
-trap 'rm -rf "$FIXTURE"' EXIT
+trap 'rm -rf "$FIXTURE" "$FIXTURE.out"' EXIT
 
 git -C "$FIXTURE" init -q
 cat > "$FIXTURE/package.json" <<'EOF'
@@ -56,6 +56,14 @@ for i in $(seq 1 80); do
 done
 cp "$FIXTURE/alpha/dup.js" "$FIXTURE/beta/dup.js"
 
+# Two duplicated basenames where one is a regex that matches the other: "a.b.js"
+# as a pattern also matches "axb.js". Proves the basename lookup compares fields
+# literally instead of interpreting the name.
+echo "export const x = 1;" > "$FIXTURE/alpha/a.b.js"
+cp "$FIXTURE/alpha/a.b.js" "$FIXTURE/beta/a.b.js"
+echo "export const y = 2;" > "$FIXTURE/alpha/axb.js"
+cp "$FIXTURE/alpha/axb.js" "$FIXTURE/beta/axb.js"
+
 git -C "$FIXTURE" add -A
 git -C "$FIXTURE" -c user.name=fixture -c user.email=fixture@example.com \
   commit -qm "fixture commit"
@@ -68,11 +76,24 @@ RC=$?
 set -e
 
 if [ "$RC" -eq 0 ]; then pass "exit code 0 on valid target"; else fail "exit code 0 on valid target (got $RC)"; fi
-assert_grep "header contains audit-checks v1" "audit-checks v1" "$OUT"
+# Full header shape, so it cannot drift away from what audit.md's readiness probe
+# requires: "audit-checks v<version> — target: <absolute path>" on the first line.
+HEADER="$(head -1 "$OUT")"
+case "$HEADER" in
+  "audit-checks v"*" — target: /"*) pass "header shape: audit-checks v<version> — target: <abs path>" ;;
+  *) fail "header shape: audit-checks v<version> — target: <abs path> (got: $HEADER)" ;;
+esac
 assert_grep "detected: node present"          "detected: node" "$OUT"
 assert_grep "largest files lists big.js"      "big.js" "$OUT"
 assert_grep "duplication: shared basename caught" "shared basename 'dup.js'" "$OUT"
 assert_grep "duplication: shared lines caught"    "shared lines: .*dup\.js" "$OUT"
+# Both paths must be listed — a regex-interpreted basename would drop or mis-collect
+# them, and audit.md quotes this report verbatim as fact.
+if grep -qxF "  shared basename 'a.b.js': alpha/a.b.js beta/a.b.js " "$OUT"; then
+  pass "duplication: regex-metachar basename listed literally"
+else
+  fail "duplication: regex-metachar basename listed literally (got: $(grep -F "a.b.js':" "$OUT" || echo none))"
+fi
 
 # todo/fixme count >= 1
 TODO_COUNT="$(grep 'todo/fixme markers:' "$OUT" | sed 's/[^0-9]*\([0-9][0-9]*\).*/\1/' || true)"
