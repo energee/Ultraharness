@@ -127,8 +127,11 @@ fi
 FILE_COUNT="$(wc -l < "$CODE_FILES" | tr -d ' ')"
 TOTAL_LOC=0
 if [ "$FILE_COUNT" -gt 0 ]; then
+  # Sum per-file counts, skipping wc's per-batch "total" lines: xargs may split
+  # a large file list into multiple wc invocations, so tail -1 would capture
+  # only the last batch's total and silently undercount.
   TOTAL_LOC="$(cd "$TARGET" && tr '\n' '\0' < "$CODE_FILES" \
-    | xargs -0 wc -l 2>/dev/null | tail -1 | awk '{print $1}' || echo 0)"
+    | xargs -0 wc -l 2>/dev/null | awk '$2 != "total" {s+=$1} END {print s+0}' || echo 0)"
 fi
 echo "size: $FILE_COUNT files, $TOTAL_LOC lines (excluding lockfiles/vendored dirs)"
 
@@ -155,7 +158,7 @@ echo "longest functions: skipped in v1 (language-specific)"
 TODO_HITS="$TMP/todo-hits"
 if [ "$FILE_COUNT" -gt 0 ]; then
   (cd "$TARGET" && tr '\n' '\0' < "$CODE_FILES" \
-    | xargs -0 grep -In -E 'TODO|FIXME' 2>/dev/null) > "$TODO_HITS" || true
+    | xargs -0 grep -HIn -E 'TODO|FIXME' 2>/dev/null) > "$TODO_HITS" || true
 else
   : > "$TODO_HITS"
 fi
