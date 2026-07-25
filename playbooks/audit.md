@@ -79,6 +79,36 @@ A lens finding uses the lens name in the principle slot, exactly like a rubric �
 `[idempotency/high]`, `[atomic/med]`. Lens findings are ranked in the same list as the
 rest; they are not a separate section and never a separate report.
 
+### 2b. Staleness of the record
+
+The footprint rule keeps `.agents/` out of your quality findings — it is your output,
+not the repo's work. That is about the *repo's* grade, and it leaves one thing
+unchecked: whether what the record claims is still true. A seeded file nobody
+re-examines becomes a confident lie that every later session trusts, so this step is
+the one narrow exception, and it judges only the record's accuracy.
+
+Read `<target>/.agents/conventions.md` and the commands block of
+`<target>/.agents/AGENTS.md`. Both carry a stamp — `recorded-at`, `Verified at` — of
+the commit they were written against. Then:
+
+- Run `git -C <target> diff <stamp>..HEAD --stat -- <the paths those claims cite>`.
+  Nothing moved under a claim's citations → the claim stands; say so and move on.
+- For each claim whose cited paths did move, open the citation. Does the cited code
+  still support the claim? A claim whose citation no longer resolves — file renamed,
+  deleted, line gone — is **void**, not "probably still true".
+- A recorded command that no longer runs is the same defect in the same file.
+
+Emit these with `staleness` in the principle slot, the way step 3 uses `teachability`.
+Grade by the same anchors: a wrong test command is high — it blocks a contributor and
+misleads every later verify; a convention contradicted by current code is med; a
+citation pointing at a moved file whose claim still holds is low. The fix is always
+"re-seed, or correct that line" — never "delete the claim so it stops being wrong".
+
+A missing stamp is itself a `staleness` finding, low: without one nothing here can be
+checked cheaply, and the file's age is unknowable.
+
+In read-only mode there is no seeded `.agents/` to judge — skip this step and say so.
+
 ### 3. Teachability judgment
 
 Attempt to state the target's build, test, and typecheck commands using only files in
@@ -157,6 +187,8 @@ nothing was written to the target.
 | "The duplication candidate is probably real, no need to read both files." | Candidates are best-effort string matches. Read both files or don't flag it. |
 | "No tests, so I'll skip the testing category." | Skipped categories need an absent evidence base that's legitimately absent. Missing tests is a high-severity finding. |
 | "The repo has our `.agents/` dir, that counts in the repo's favor." | Never. Audits judge outcomes only — harness-owned files are never a finding. |
+| "The footprint rule says skip `.agents/`, so I'll skip the staleness step too." | The rule keeps `.agents/` out of the repo's *grade*. Step 2b judges whether the record is *true* — a different question, and the only thing that catches a seeded file that has quietly started lying. |
+| "The cited file changed, but the convention is probably still fine." | Open the citation. "Probably" is how a void claim survives another six months of sessions trusting it. |
 | "Seeding is a hassle, I'll just go read-only." | Read-only needs an explicit refusal from the user, not your inference. Unasked-for, the answer is seed first. |
 | "Read-only, but the scratch file may as well live in the target — it's one file." | It's still a write to a repo the user said not to write to. The scratch file goes outside the target; if none was named, ask. |
 | "Everything here is low severity." | Grade against the severity anchors in `principles.md`. Absent tests and broken correctness are high, whatever the fix costs. |

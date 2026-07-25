@@ -17,6 +17,13 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
    run died mid-finding — resume those first (see Workflow step 1). Never start
    fresh work while an `in-progress` entry sits unexamined. This read also tells
    item 4 whether this is a resumed run.
+
+   On a resumed run, say in your first report what the ledger told you — the entry you
+   are picking up, its status, its attempts — **and what it failed to tell you**: what
+   you had to reconstruct from the worktree, the diff, or the branch tip because no
+   entry recorded it. The second half is the useful half. The ledger is the whole
+   handoff, so every gap you had to fill is a defect in its format, and one nobody can
+   see from inside the session that wrote it.
 4. **Base branch.** Read the ledger's `Run state` block. A `- base branch:` still
    holding the seeded placeholder — any angle-bracket `<...>` value — is not a
    recorded value; treat it as absent. Then:
@@ -200,7 +207,12 @@ merge conflicts with work from an
 earlier pass, resolve it now, re-verify, then merge — never leave a finding stranded
 on its branch. Then, BEFORE deleting the worktree, update the ledger entry:
 `status: done`, final `attempts`, and `delta` with before/after evidence (e.g.
-`dup blocks 14 → 9; tests green` — quote real output, not recollection). The ledger
+`dup blocks 14 → 9; tests green` — quote real output, not recollection). Re-check the
+delta against the tree **as you write it**: run the grep or command that proves each
+claim in it, and count what you claim to have changed. A delta is the one line a future
+session takes on trust without re-deriving, and nothing downstream verifies it — a
+pass that fixed one of two citations and wrote "citations" plural leaves the next
+session believing the work is finished. The ledger
 must never claim less than reality: a run that dies between merge and ledger write
 would otherwise leave a landed fix marked `in-progress` with no worktree, which the
 resume path in step 1 cannot distinguish from unstarted work. Only after the ledger
@@ -233,14 +245,40 @@ this pass wrote is left dirtying the target.
   not exist, a rubric that did not cover the case. This is telemetry for whoever
   maintains the harness, not context for the next session — it goes in the report, not
   into the target. Nothing missing, nothing written.
+- If the fix changed code that `<target>/.agents/conventions.md` cites, or made one of
+  its claims false, correct that claim **in the fix commit** — docs travel with the
+  change — and advance the file's `recorded-at` to the commit you just verified
+  against. Same for `AGENTS.md`'s `Verified at` whenever you re-ran a recorded command.
+  Advancing a stamp without re-checking the claims under it is the one thing the stamp
+  must never do: it launders old prose as freshly verified.
 - Make a checkpoint commit in the target covering everything this pass still has
-  uncommitted: the ledger update, and any `AGENTS.md` or `learnings.md` edit above.
+  uncommitted: the ledger update, and any `AGENTS.md`, `conventions.md`, or
+  `learnings.md` edit above.
   The fix itself is already on the base branch — step 7's merge put it there — so it
   is not part of this commit. No Co-Authored-By lines. Then confirm the target's
   working tree is clean.
 - Report scope remaining: findings done this run, findings still open, envelope
   budget left. On multi-hour runs, pause here for a user checkpoint between phases
   before continuing.
+- **Hand off here or nowhere.** If your working context is filling — long transcripts,
+  a compaction warning, degraded recall of earlier passes — this is the only safe
+  place to stop and let a fresh session continue. The tree is committed, the ledger
+  says `done`, the worktree is gone: a resumed run needs nothing this session holds.
+  Mid-pass is the opposite — an uncommitted worktree is the resume path's messiest
+  case, so finish or cleanly abandon the pass first.
+
+  The handoff is one line, and it is deliberately fixed:
+
+  ```
+  Read <target>/.agents/AGENTS.md and continue the improve run.
+  ```
+
+  Do **not** write a handoff summary. A summary is composed by the most depleted
+  context in the run, from memory, at the moment its memory is worst — and every other
+  step here refuses summaries in favour of evidence. The ledger is better because each
+  line was written by a fresh context at the moment it acted. If that one line is not
+  enough for the next session to proceed, the defect is in the ledger, not the prompt:
+  fix the ledger, and never grow the prompt to compensate.
 
 ### 9. Repeat
 
@@ -271,7 +309,11 @@ impossible without one — a dependency upgrade is the finding — that is
 ### Safety envelope
 
 Defaults, user-overridable at run start: **max 10 findings or 4 hours per run**,
-whichever trips first. When either trips: finish or cleanly abandon the current pass
+whichever trips first. **Context is a third dimension** with no fixed number: when
+your own working context is filling, treat that as the envelope tripping and take the
+handoff in step 8. It trips only at a pass boundary — an envelope that stops a run
+mid-fix trades one problem for a worse one. When any of them trips: finish or cleanly
+abandon the current pass
 (a half-done pass reverts its worktree and returns the entry to `open` with a note),
 write the ledger, report scope remaining, and stop — following the record-and-commit
 rule at the end of Hard stops, which covers this exit too. Never quietly run past the

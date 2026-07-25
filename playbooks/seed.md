@@ -108,6 +108,12 @@ Copy the five top-level files from `<harness>/templates/agents-dir/` into
   `{{TYPECHECK_CMD}}` with the values from steps 2-3.
 - `conventions.md`: replace each `{{OBSERVED}}` with that section's observed,
   cited content from step 3.
+- `{{RECORDED_AT}}`, in both files: the target's current commit, from
+  `git -C <target> rev-parse --short HEAD`, read **before** you write anything. It
+  stamps the revision these observations and command runs were made against. What you
+  record is true of that commit and promises nothing about later ones — the stamp is
+  what lets a future session tell the difference cheaply, instead of trusting prose of
+  unknown age.
 - `principles.md`, `ledger.md`, `learnings.md`: copy verbatim (no placeholders).
 
 After writing, search `<target>/.agents/` for the string `{{` — it must not appear.
@@ -119,6 +125,17 @@ resolved there (filled if a gate fired, deleted with its section if none did).
 - Do not blindly re-copy. For each file, compare its current content against
   observed reality and update **only lines that are stale** (e.g. a test command
   that no longer verifies, a convention contradicted by current code).
+- **Let the stamp scope that comparison.** Read `recorded-at` from
+  `conventions.md` and `Verified at` from `AGENTS.md`, then run
+  `git -C <target> diff <stamp>..HEAD --stat -- <the files those claims cite>`. Paths
+  with no changes since the stamp carry claims as good as when they were written —
+  leave them, and say in the report that they were skipped and why. Re-examine the
+  claims whose cited paths moved, and re-run the commands. Then write today's commit
+  as the new stamp on every file you touched, and only those. A stamp advanced without
+  re-checking is worse than no stamp: it launders old prose as freshly verified.
+  If a stamp is missing (seeded before this existed) or does not resolve —
+  `git -C <target> cat-file -e <stamp>^{commit}` fails, as it will after a history
+  rewrite — treat the whole file as unscoped and re-examine every claim, then stamp it.
 - Never touch user-added content: extra sections, ledger entries, learnings, and
   hand-written notes stay exactly as they are. `ledger.md` and `learnings.md` are
   append-only history — never rewrite or prune their entries here. The ledger's

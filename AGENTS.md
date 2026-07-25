@@ -31,4 +31,8 @@ don't preload either.
   it, measure it, or let it fire a gate. In those two root files the exclusion is the
   delimited block, not the file — content the target already had is the repo's own, and
   is evidence like any other file. Playbooks state only what this means at their step;
-  the rule itself lives here.
+  the rule itself lives here. **One exception, narrow:** whether the record is *true*
+  is fair game — `playbooks/audit.md` step 2b checks seeded claims against the code
+  they cite and reports drift under `staleness`. Never counted toward the repo's grade;
+  always checked for accuracy, because a stale record is trusted by every later
+  session.
