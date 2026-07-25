@@ -57,15 +57,23 @@ Loop the following. One pass = one finding.
 - If the ledger has `open` or `in-progress` entries, that is your queue — do not
   re-audit first. An `in-progress` entry is resumed at whatever step its worktree
   and attempts count indicate: if its worktree
-  `<target>/.agents/worktrees/<finding-slug>/` exists, first check whether the fix
-  already landed (a run that died between merge and cleanup): it did only if the
-  branch has at least one commit of its own AND that commit is merged into the base
-  branch. A branch still sitting at the base commit reports as "merged" while having
-  landed nothing — that is a pass that died before committing, not a merged one, and
-  its work is the uncommitted diff in the worktree. If the fix truly landed, jump to
-  step 7's ledger update; otherwise inspect the worktree's diff (`git -C <worktree>
-  add -AN` first, so new files show) and continue from fix or verify. If no
-  worktree exists, treat it as `open` and restart the pass (increment nothing —
+  `<target>/.agents/worktrees/<finding-slug>/` exists, work out where the pass died
+  from the **worktree**, not from branch topology. Topology cannot tell you: step 3
+  cuts the branch from base and step 8 is the first commit on base, so every merge
+  here fast-forwards and a landed fix leaves base tip == branch tip — the same shape
+  as a branch that never committed anything. `--merged` says "merged" in both cases.
+  Instead, run `git -C <worktree> add -AN` (so new files show) then
+  `git -C <worktree> status --porcelain`, and read off the state:
+  - **Non-empty** — the pass died mid-fix and its work is that uncommitted diff.
+    Inspect it and continue from fix or verify.
+  - **Empty, and the branch tip is a commit this pass made** (its message names this
+    finding): the fix is committed. If that commit is reachable from the base branch,
+    it landed — jump to step 7's ledger update. If it is not, the merge never
+    happened — resume at step 7's merge.
+  - **Empty, and the branch tip is just the base commit** — nothing was ever done.
+    Treat it as `open` and restart the pass.
+
+  If no worktree exists, treat it as `open` and restart the pass (increment nothing —
   attempts count only completed fix attempts).
 - If the ledger has no open entries (first run, or queue drained), run
   `playbooks/audit.md` on the target. It writes ranked `open` entries and a top-3
@@ -124,7 +132,10 @@ diff line by line and simplify. If de-sloppifying changed anything, run verify a
 ### 7. Merge back
 
 Commit the fix on the finding's branch first — an uncommitted worktree has nothing to
-merge — with no Co-Authored-By line. Then merge the branch into the run's base branch,
+merge — with no Co-Authored-By line. On a resume that already carries its commit (step
+1's second state), there is nothing left to commit: skip straight to the merge, and
+never manufacture an empty commit to satisfy this sentence. Then merge the branch into
+the run's base branch,
 which requires the target checked out on it (readiness step 4 guaranteed that). If the
 merge conflicts with work from an
 earlier pass, resolve it now, re-verify, then merge — never leave a finding stranded
@@ -152,9 +163,11 @@ this pass wrote is left dirtying the target.
   convention the fix had to follow, a trap that cost an attempt — append one line to
   `<target>/.agents/learnings.md` in that file's format, incrementing `seen` on an
   existing line rather than adding a duplicate. Nothing learned, nothing written.
-- Make a checkpoint commit in the target covering everything this pass produced: the
-  merged fix, the ledger update, and any `AGENTS.md` or `learnings.md` edit above.
-  No Co-Authored-By lines. Then confirm the target's working tree is clean.
+- Make a checkpoint commit in the target covering everything this pass still has
+  uncommitted: the ledger update, and any `AGENTS.md` or `learnings.md` edit above.
+  The fix itself is already on the base branch — step 7's merge put it there — so it
+  is not part of this commit. No Co-Authored-By lines. Then confirm the target's
+  working tree is clean.
 - Report scope remaining: findings done this run, findings still open, envelope
   budget left. On multi-hour runs, pause here for a user checkpoint between phases
   before continuing.
@@ -213,3 +226,5 @@ before concluding anything about capability.
 | "I'm close — one more attempt past 3 will crack it." | Park it with a gap ruling. The 4th attempt is what the next run, with fresh context, is for. |
 | "The envelope tripped but the queue is almost empty." | Stop cleanly, report scope remaining. "Almost empty" is exactly what the next run's ledger is for. |
 | "This in-progress entry is stale, I'll just start fresh." | Resume it. The ledger surviving session death is the point — inspect its worktree before deciding anything. |
+| "The recorded base branch isn't checked out — I'll just check it out and carry on." | Stop and report both. This playbook never switches the target's checkout; something moved it, and guessing which branch is right is how a fix lands on the wrong one. |
+| "The branch reports merged, so the fix is done." | Every merge here fast-forwards, so "merged" is also what a branch that committed nothing looks like. Read the worktree's status, not the topology. |
