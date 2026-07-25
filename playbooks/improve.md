@@ -115,9 +115,19 @@ Create a worktree for this one finding at
 `harness/<finding-slug>`, branched from the run's base branch (readiness step 4).
 One finding, one worktree, one branch. All fix work happens inside it.
 
-Arriving here from step 1's restart path, both already exist and hold no work — that is
-how step 1 reached that bullet. Do not improvise: reset the existing branch to the
-current base branch and reuse the worktree (or delete both and re-cut them). Either way
+Arriving here from either of step 1's restart routes, the worktree or the branch — or
+both — may already exist while holding no work. Do not improvise; take the case that
+applies:
+
+- **Both exist**: reset the branch to the current base branch from *inside* the
+  worktree (`git -C <worktree> reset --hard <base>`). `git branch -f` refuses while a
+  worktree has that branch checked out. Then reuse the worktree.
+- **Branch exists but its worktree does not**: add a worktree onto the existing branch,
+  naming it *without* `-b` — `-b` fatals on a name that already exists — then reset as
+  above.
+- **Neither exists**: the normal path above.
+
+Deleting whatever exists and re-cutting both is always a valid substitute. Either way
 the pass starts from current base, so step 7 has only this pass's fix to merge.
 
 ### 4. Fix
