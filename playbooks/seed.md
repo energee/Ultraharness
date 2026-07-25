@@ -126,6 +126,24 @@ resolved there (filled if a gate fired, deleted with its section if none did).
   content: leave its recorded values alone even though they differ from the
   template's placeholder. Resetting a recorded base branch would send a resumed run
   merging into the wrong branch.
+- A whole section the template has and the target's copy lacks is **missing, not
+  deleted** — add it. "Update only stale lines" governs lines the target already has;
+  it would otherwise freeze every repo seeded before a template grew a section, which
+  is exactly the repo that needs the new content. Harness-owned sections are the ones
+  the template defines; anything else in the file is the user's and stays untouched.
+  Insert it where the template puts it, relative to the sections either side — never
+  appended blindly to the end, which would land `## Guard precedence — governs every
+  rubric and lens` beneath the rubrics it claims to govern, and would put a template
+  heading after `ledger.md`'s append-only entries. Instantiate any `{{...}}`
+  placeholders from steps 2-3 exactly as on a first seed, so step 4's `{{` assertion
+  still holds. Name the sections you added in the report.
+  - **Except a section the template marks deletable**, which is absent by design, not
+    missing. `AGENTS.md`'s `## Lenses` section is the case today: step 4a deletes it
+    outright on a target where no lens gate fired, so a repo with no lenses carries no
+    lens prose. Re-adding it here would put those lines back on every re-seed and undo
+    the one guarantee gating exists to provide. Read the template's own comment on a
+    section before calling it missing — a section that says it may be deleted has said
+    so on purpose.
 - If a file is missing, create it from the template as above.
 
 ### 4a. Evaluate the lens gates

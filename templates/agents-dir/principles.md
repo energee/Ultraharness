@@ -15,6 +15,30 @@ Severity anchors — grade against these, not against how expensive the fix look
 Where two anchors both fit, the higher one wins: a doc naming a command that does not
 exist is a wrong fact *and* blocks a contributor from testing — grade it high.
 
+## Guard precedence — governs every rubric and lens
+
+A **guard** is code whose job is to survive something going wrong: input validation or
+sanitization, an authorization check, an error branch that changes control flow on
+failure, a timeout, a bound, a cleanup path, a transaction wrapper, a version pin.
+
+Where a rubric below — or a lens in `lenses/` — would flag a guard *for removal*, it
+stays silent. "It has one
+caller", "it has no caller", "it adds a branch or nesting", and "it is a
+single-implementation indirection" are never sufficient reason to remove one — a
+guard invoked by a framework, a decorator, or a route registration has no in-tree
+callers by construction, and that is not evidence it is dead. **Removal at a boundary
+requires showing the boundary is gone, not that the symbol is uncalled.** A guard that is
+genuinely too complex gets extracted into a named function, never dropped.
+
+The rule runs both ways, or it becomes a license for defensive bloat: a timeout on an
+in-process call, a retry wrapper around something that cannot fail transiently, a
+compatibility shim for a version never shipped — machinery for a failure the boundary
+cannot produce is still YAGNI's to flag. Handling a failure that can actually happen:
+keep. Machinery for one nobody has seen: flag.
+
+This rubric does not find *missing* guards. A repo with no validation anywhere audits
+clean here; silence is not a clean bill of health.
+
 ## DRY — one authoritative home per piece of knowledge
 
 Spot it:
@@ -82,3 +106,5 @@ Do NOT apply when:
 - It's an accessibility affordance — its users don't show up in call-site greps.
 - It's a single-implementation test seam exercised by an actual test today — that's
   DIP, keep it (same precedence rule as under SOLID).
+- It backs persisted data — a column, table, migration, or serialized field.
+  Unreferenced is never sufficient here; rows outlive the code that reads them.
