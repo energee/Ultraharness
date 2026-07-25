@@ -48,14 +48,14 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
      queue and skip the audit entirely.
    - If `.agents/AGENTS.md` records `none verified` or `none` for tests, proceed:
      both mean the same thing here — there is no test suite to run. The missing test
-     suite IS finding #1. For every *other* finding, while no suite exists,
-     `playbooks/verify.md` returns **PASS (unverified-by-tests)** per its own §5 —
-     that verdict is not a FAIL and does not count toward the 3-attempt limit. Finding
-     #1 itself is the exception: the pass that adds the suite is verified by running
-     the suite it just added (verify's probe item 3), so it earns a normal PASS or
-     FAIL, and its FAILs do count. Without that exception the missing-tests finding
-     could never fail, never park, and never reach the Hard stop below — and a broken
-     new suite would pass its own gate.
+     suite IS finding #1, slug `missing-tests`. While no suite exists, a pass whose
+     diff adds no tests gets **PASS (unverified-by-tests)** from `playbooks/verify.md`
+     per its own §5 — not a FAIL, and it does not count toward the 3-attempt limit.
+     The trigger is the diff, not which finding is being worked: **any** pass whose
+     diff introduces test files is verified by running the suite it just added
+     (verify's probe item 3), so it earns a normal PASS or FAIL, and those FAILs do
+     count. Without that, the pass that adds tests could never fail, never park, and
+     never reach the Hard stop below — and a broken new suite would pass its own gate.
    - Only a `.agents/AGENTS.md` that records no test entry at all (neither `none` nor
      `none verified`) means seeding is incomplete — run `playbooks/seed.md` first.
 
@@ -102,16 +102,21 @@ Loop the following. One pass = one finding.
   `playbooks/audit.md` on the target. It writes ranked `open` entries and a top-3
   queue into the ledger.
 - **If readiness step 5 recorded a red baseline**, add its entry to the queue now,
-  after the audit, ranked above everything the audit produced: slug `red-baseline`,
+  ranked above everything already in the queue: slug `red-baseline`,
   principle slot `testing`, severity `high`, `file:line` the first failing assertion,
   the quoted summary line as evidence.
-  - **Unless the ledger already carries a `red-baseline` entry** — one per target,
-    ever. If that entry is `open` or `in-progress`, it is already your queue's head;
-    work it. If it is `parked`, the suite is red for a reason a previous run could not
+  - **Unless the ledger already carries a baseline entry** — slug `red-baseline`
+    (failing suite) or `missing-tests` (no suite at all), one of each per target, ever.
+    If that entry is `open` or `in-progress`, it is already your queue's head; work it.
+    If it is `parked`, the baseline is broken for a reason a previous run could not
     resolve and recorded a ruling for: that is the Hard stop below, immediately — stop
     the run and report the existing ruling. Writing a second entry would hand the
     parked finding a fresh 0/3 budget and walk straight back into the loop the hard
     stop exists to end.
+- **If readiness step 5 found no test suite at all**, the missing suite is finding #1
+  under slug `missing-tests`, ranked above everything already in the queue, subject to
+  the same guard. The audit may also raise it under a slug of its own — if so, that is
+  this entry; rename it rather than tracking two.
 
 ### 2. Pick
 
@@ -240,7 +245,8 @@ loop, envelope permitting.
 Defaults, user-overridable at run start: **max 10 findings or 4 hours per run**,
 whichever trips first. When either trips: finish or cleanly abandon the current pass
 (a half-done pass reverts its worktree and returns the entry to `open` with a note),
-write the ledger, report scope remaining, and stop. Never quietly run past the
+write the ledger, report scope remaining, and stop — following the record-and-commit
+rule at the end of Hard stops, which covers this exit too. Never quietly run past the
 envelope, and never shrink the reported queue to make the run look finished.
 
 ### Failure path (per finding)
@@ -256,8 +262,10 @@ instead, and its attempts are kept as evidence — a human resolving an `authori
 reads them to see what was already tried. Keeping them means **committing** them, not
 just leaving the worktree: commit the last attempt on the finding's branch with a
 first line beginning `parked(<finding-slug>): ` — deliberately not the `fix(` form, so
-step 1's resume path cannot mistake it for a landed fix — and name that branch in the
-ruling. An uncommitted worktree is not preservation: step 3's reset path wipes it the
+step 1's resume path cannot mistake it for a landed fix — and record its **commit SHA**
+in the ruling. The SHA, not the branch name: step 3 resets `harness/<finding-slug>` and
+step 7 deletes it, so the branch stops pointing at the attempts the moment anyone
+unparks the finding, which is exactly when someone follows the pointer. An uncommitted worktree is not preservation: step 3's reset path wipes it the
 moment anything restarts the finding. Leave the worktree in place too, and say in the
 report that it is there. Everything else about the stop is in Hard stops below.
 
@@ -283,7 +291,7 @@ failed run — retry before concluding anything about capability.
 - **On any stop — the ones above and the safety envelope alike** — record the stop in
   the ledger, then commit it, then report to the user. Both halves matter:
   - **Record it** in the ledger's `Run stop` format (see
-    `templates/agents-dir/ledger.md`). It is a run record, not a finding, so it does
+    `<harness>/templates/agents-dir/ledger.md`). It is a run record, not a finding, so it does
     not take the `Entry format` fields — no status, no attempts, no delta. Skip it
     entirely when a parked finding's own `- ruling:` already says both things, as the
     parked-baseline stop does; one honest record beats two that can drift apart.

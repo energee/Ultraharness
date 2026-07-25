@@ -133,8 +133,11 @@ nothing was written to the target.
 - **Target not seeded and seeding fails** — stop and report why, unless the user
   explicitly declined seeding or said the target must not be written to; do not audit
   an unseeded repo from memory of the rubrics.
-- **On any stop** — if a ledger exists, append one record in the ledger's `Run stop`
-  format (see `templates/agents-dir/ledger.md`); then report the same to the user.
+- **On any stop** — append one record in the ledger's `Run stop` format (see
+  `<harness>/templates/agents-dir/ledger.md`) wherever step 6 would have written: the
+  target's ledger normally, the scratch file in read-only mode. In read-only mode the
+  target's ledger may well exist — writing the stop record into it would put output in
+  a repo probe item 2 promised would receive none. Then report the same to the user.
 
 ## Anti-rationalization table
 

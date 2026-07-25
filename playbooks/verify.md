@@ -30,10 +30,11 @@ typecheck commands are the verified ones recorded in `<target>/.agents/AGENTS.md
      and this change is what makes it false. The trigger is the diff, not which
      finding is being worked: any pass that adds tests earns a normal verdict.
      Determine the new suite's command from the diff and the target's README, run
-     it, and verdict on it normally (PASS or FAIL). If the added suite cannot be run
-     at all — no runner, no determinable command — that is **FAIL**, not stop
-     condition 3: the change itself introduced the unrunnable suite, so it is a
-     verdict on the change, not an environment problem.
+     it, and verdict on it normally (PASS or FAIL). If the added suite cannot be run,
+     or crashes before any test executes — no runner, no determinable command, a test
+     file that does not parse — that is **FAIL**, not stop condition 3: the change
+     itself introduced the broken suite, so it is a verdict on the change, not an
+     environment problem.
      Verifying a test-adding change against the record instead of against the diff
      is how a broken new suite passes its own gate: the one change whose whole
      purpose is to create a suite would be the one change never actually run.
@@ -109,9 +110,10 @@ its own evidence — not something to slip into a verification pass.
   nothing to verify.
 - **Test command itself is broken** (command not found, harness crash before any
   test runs): stop and report it — that is an environment/seed problem, not a
-  verdict on the change.
+  verdict on the change. **Unless the diff introduces the test files**: then the
+  change is what broke it, so the verdict is FAIL, per probe item 3.
 - **On any stop above** — if `<target>/.agents/ledger.md` exists, append one record
-  in the ledger's `Run stop` format (see `templates/agents-dir/ledger.md`), then
+  in the ledger's `Run stop` format (see `<harness>/templates/agents-dir/ledger.md`), then
   report the same to the user.
 
 ## Anti-rationalization table

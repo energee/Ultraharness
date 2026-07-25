@@ -185,7 +185,7 @@ touch a file just to have something to commit.
   matching rule; a seed that cannot be committed is not a seed. Nothing has been
   written at that point — leave it that way.
 - **On any stop above** — if `<target>/.agents/ledger.md` already exists, append one
-  record in the ledger's `Run stop` format (see `templates/agents-dir/ledger.md`),
+  record in the ledger's `Run stop` format (see `<harness>/templates/agents-dir/ledger.md`),
   then report the same to the user.
 
 ## Anti-rationalization table
