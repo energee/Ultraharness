@@ -10,17 +10,27 @@ repo; `<harness>` is this one.
 
 ## Quick start
 
-Copy one of these prompts into your agent CLI, replacing the two paths. The same
-prompt works in Claude Code, Codex CLI, Cursor, Gemini CLI, OpenCode, and any other
-agent that can read files and run shell commands.
+Clone it anywhere — there is nothing to install and nothing to build:
+
+```
+git clone https://github.com/energee/harness.git ~/harness
+```
+
+Then copy one of these prompts into your agent CLI, replacing `<target-path>` with the
+repo you want worked on. The same prompt works in Claude Code, Codex CLI, Cursor,
+Gemini CLI, OpenCode, and any other agent that can read files and run shell commands.
 
 | Action | Prompt |
 | --- | --- |
-| Seed | `Read /path/to/harness/AGENTS.md, then run the seed playbook against my repo at <target-path>.` |
-| Audit | `Read /path/to/harness/AGENTS.md, then run the audit playbook against my repo at <target-path>.` |
-| Improve | `Read /path/to/harness/AGENTS.md, then run the improve playbook against my repo at <target-path>.` |
-| Verify | `Read /path/to/harness/AGENTS.md, then run the verify playbook on the change I just made in <target-path>.` |
-| Self-test | `Read /path/to/harness/AGENTS.md, then run the self-test playbook.` |
+| Seed | `Read ~/harness/AGENTS.md, then run the seed playbook against my repo at <target-path>.` |
+| Audit | `Read ~/harness/AGENTS.md, then run the audit playbook against my repo at <target-path>.` |
+| Improve | `Read ~/harness/AGENTS.md, then run the improve playbook against my repo at <target-path>.` |
+| Verify | `Read ~/harness/AGENTS.md, then run the verify playbook on the change I just made in <target-path>.` |
+| Self-test | `Read ~/harness/AGENTS.md, then run the self-test playbook.` |
+
+If you cloned somewhere else, use that path instead — nothing depends on the location.
+Pulling the latest is the whole update procedure: the next run picks it up, and
+re-running seed refreshes an already-seeded repo.
 
 Start with seed. Audit and improve both expect a seeded repo — or tell the audit your
 repo must not be written to, and it runs read-only.
