@@ -76,9 +76,7 @@ Only reach for a distributed transaction or an outbox when 1-3 provably cannot h
   constant) are not findings.
 - A write path with a documented at-most-once source and no retry anywhere is fine.
 
-## Finding format
-
-`[<principle>/<severity high|med|low>] <file:line> — <what> — <smallest fix>`
+## Evidence discipline
 
 Grep results are CANDIDATES, exactly as in DRY. No finding without reading the code
 and naming the concrete double-execution: "the retry at `worker.py:41` re-runs

@@ -199,7 +199,6 @@ templates/agents-dir/     # the .agents/ skeleton seed.md instantiates
 scripts/audit-checks.sh   # deterministic fact collector (git + grep + awk only)
 scripts/test.sh           # bash tests for the fact collector
 docs/ablations.md         # which instruction rules have been tested, and how
-docs/plans/               # implementation plans
 ```
 
 ## Testing the harness itself

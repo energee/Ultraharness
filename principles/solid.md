@@ -48,6 +48,3 @@ In practice, SRP and DIP catch the most real defects — spend most of the budge
 - Small internal helper classes with no external consumers don't need interface
   boundaries — DIP matters at architectural seams (domain/infra), not everywhere.
 
-## Finding format
-
-`[<principle>/<severity high|med|low>] <file:line> — <what> — <smallest fix>`

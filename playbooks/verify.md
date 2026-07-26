@@ -9,6 +9,15 @@ memory, summaries, or prior runs — only on output produced *now*.
 typecheck commands are the verified ones recorded in `<target>/.agents/AGENTS.md`
 (seeded by `playbooks/seed.md`).
 
+**Called from a worktree** — `playbooks/improve.md` step 5 runs this gate inside
+`<target>/.agents/worktrees/<slug>/` — `<target>` means that worktree everywhere except
+the ledger. Commands, diff, and `.agents/AGENTS.md` all come from there, because the
+change under test is what is checked out there. A `Run stop` record does not: write it
+to the **main checkout's** `.agents/ledger.md`. The worktree's copy sits on the
+finding's branch, where step 7 either folds it into the fix commit or deletes it with
+the worktree — so the one record written to explain why a run stopped is the one most
+likely to vanish.
+
 ## Readiness probe
 
 1. There is a specific claimed-complete change to verify — you can name it in one

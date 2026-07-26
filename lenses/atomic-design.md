@@ -75,6 +75,3 @@ Where a finding is really SOLID or DRY, emit it as `[solid/...]` or `[dry/...]`.
 lens earns its slot only for what the core four cannot name: token duplication spread
 across components, prop drilling, and the missing entry point.
 
-## Finding format
-
-`[<principle>/<severity high|med|low>] <file:line> — <what> — <smallest fix>`

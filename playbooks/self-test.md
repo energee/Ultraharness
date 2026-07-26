@@ -161,9 +161,14 @@ that has never been executed is unverified. Run exactly one pass.
 
 Build a third fixture, `<fixture3>`: a manifest and a **real test command whose suite
 asserts something and is green at run start** (a testless fixture would route every
-verdict to PASS (unverified-by-tests) and prove nothing about the gate), plus one
-planted finding a minimal fix can close — the duplicated block from step 2 is enough.
-Commit it, seed it, and audit it, so the ledger carries a real queue.
+verdict to PASS (unverified-by-tests) and prove nothing about the gate), plus **two**
+planted findings a minimal fix can close — the duplicated block from step 2, and a
+second one like it in another pair of files. Commit it, seed it, and audit it, so the
+ledger carries a real queue.
+
+Two, not one, because step 5e resumes this same fixture and needs an entry still `open`
+after this step closes one. Relying on the audit to incidentally raise a second finding
+would make that step's setup depend on a judgment call this playbook does not control.
 
 Then run `playbooks/improve.md` against it with the safety envelope overridden to
 **1 finding**, and assert, in order:
@@ -302,9 +307,10 @@ which nothing else here covers.
 
 ### 6. Delete the fixture
 
-Remove both temp dirs — `<fixture>` and `<fixture2>`. Leaving one behind means the
-next self-test silently runs against a pre-seeded repo and stops testing the seed path
-at all.
+Remove every temp dir this run created — `<fixture>`, `<fixture2>`, and `<fixture3>`.
+Leaving one behind means the next self-test silently runs against a pre-seeded repo and
+stops testing the seed path at all. `<fixture3>` also carries git worktrees and
+`harness/*` branches from step 5b; deleting its directory takes those with it.
 
 ### 7. Fix what the run broke
 

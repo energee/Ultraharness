@@ -53,6 +53,3 @@ Smallest intervention first:
   today. Precedence rule (matches `solid.md`): tested seam → DIP, keep it, don't flag;
   untested seam → YAGNI, flag it as speculative.
 
-## Finding format
-
-`[<principle>/<severity high|med|low>] <file:line> — <what> — <smallest fix>`
