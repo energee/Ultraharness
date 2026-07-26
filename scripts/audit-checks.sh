@@ -6,7 +6,15 @@
 # Exit 0 on success, exit 2 on invalid target path.
 set -euo pipefail
 
-RUBRIC_VERSION="v1 (2026-07-24)"
+# Byte-order collation, forced, for every sort and comparison below. audit.md quotes
+# this report verbatim as fact, so the same tree must produce the same bytes on any
+# machine — and collation under a UTF-8 locale orders "Zeta" after "apple" where C
+# orders it before. Set once here rather than per-call so a sort added later inherits
+# it. scripts/test.sh asserts this by running the script under two locales and
+# comparing output byte for byte.
+export LC_ALL=C
+
+SCRIPT_VERSION="v2 (2026-07-25)"
 
 TARGET="${1:-}"
 if [ -z "$TARGET" ] || [ ! -d "$TARGET" ]; then
@@ -38,12 +46,13 @@ fi
 
 grep -Ev '(^|/)(node_modules|vendor|dist|build|target|\.next|__pycache__|\.venv|venv)/' "$ALL_FILES" \
   | grep -Ev '(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|poetry\.lock|uv\.lock|Gemfile\.lock|composer\.lock|go\.sum)$' \
+  | grep -Ev '(^|/)\.agents/' \
   > "$CODE_FILES" || true
 
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-echo "audit-checks $RUBRIC_VERSION — target: $TARGET"
+echo "audit-checks $SCRIPT_VERSION — target: $TARGET"
 
 # ---------------------------------------------------------------------------
 # detected: ecosystem, from manifest evidence only
@@ -141,7 +150,7 @@ echo "size: $FILE_COUNT files, $TOTAL_LOC lines (excluding lockfiles/vendored di
 echo "largest files: top 10 by line count"
 if [ "$FILE_COUNT" -gt 0 ]; then
   (cd "$TARGET" && tr '\n' '\0' < "$CODE_FILES" \
-    | xargs -0 wc -l 2>/dev/null | grep -v ' total$' | sort -rn | head -10 \
+    | xargs -0 wc -l 2>/dev/null | grep -v ' total$' | sort -k1,1rn -k2 | head -10 \
     | awk '{ lines=$1; $1=""; sub(/^ /,""); printf "  %s lines  %s\n", lines, $0 }') || true
 else
   echo "  (no files inventoried)"
@@ -192,7 +201,7 @@ done < "$TMP/dup-names"
 # (b) normalized-line overlap among the 20 largest files (bounded pairwise scan)
 if [ "$FILE_COUNT" -gt 1 ]; then
   (cd "$TARGET" && tr '\n' '\0' < "$CODE_FILES" \
-    | xargs -0 wc -l 2>/dev/null | grep -v ' total$' | sort -rn | head -20 \
+    | xargs -0 wc -l 2>/dev/null | grep -v ' total$' | sort -k1,1rn -k2 | head -20 \
     | awk '{ $1=""; sub(/^ /,""); print }') > "$TMP/top-files" || true
   i=0
   while IFS= read -r f; do
@@ -247,5 +256,66 @@ AGENTS_STATE=missing; [ -d "$TARGET/.agents" ] && AGENTS_STATE=present
 LEDGER_STATE=missing
 { [ -f "$TARGET/.agents/ledger.md" ] || [ -f "$TARGET/.agents/LEDGER.md" ] || [ -f "$TARGET/.agents/ledger" ]; } && LEDGER_STATE=present
 echo "agents dir: .agents/ $AGENTS_STATE; ledger $LEDGER_STATE"
+
+# ---------------------------------------------------------------------------
+# gates: which conditional lenses apply (see <harness>/lenses/). Repo *shape*,
+# never a verdict on quality — the same class of fact as `detected:`. One line per
+# lens, alphabetical, printed every run: "not-fired" is a fact, and a withheld
+# lens must be distinguishable from a section that never ran.
+#
+# ponytail: two lenses, two hardcoded gates. If a third arrives, read the patterns
+# out of the lens files instead of growing a third branch here.
+# ---------------------------------------------------------------------------
+
+# Gates judge the target's own *code*. CODE_FILES has already dropped the harness
+# footprint per the rule in AGENTS.md; these two exclusions go further, and they are
+# why this belongs in a script rather than in prose:
+#   CHANGELOG, docs/  — prose about the code, not the code
+#   .md/.rst/.txt/.adoc — every lens gate already disclaims matches on the word
+#                       "retry" in prose; excluding the extensions enforces that
+#                       mechanically instead of asking for the judgement each run.
+# A repo whose only queue evidence lives in documentation does not fire the gate.
+# That is default-deny, and it is the safe direction: a missing lens is a smaller
+# wrong than a lens seeded into a repo it does not describe.
+GATE_FILES="$TMP/gate-files"
+grep -Ev '(^|/)CHANGELOG|(^|/)docs/|\.(md|rst|txt|adoc)$' "$CODE_FILES" > "$GATE_FILES" || true
+
+gate_report() {
+  # gate_report <lens-slug> <hits-file>
+  N="$(wc -l < "$2" | tr -d ' ')"
+  if [ "$N" -gt 0 ]; then
+    EV="$(head -3 "$2" | tr '\n' ',' | sed -e 's/,$//' -e 's/,/, /g')"
+    UNIT=hits; [ "$N" -eq 1 ] && UNIT=hit
+    echo "gates: $1 FIRED ($N $UNIT; evidence: $EV)"
+  else
+    echo "gates: $1 not-fired"
+  fi
+}
+
+# atomic: component-UI file extensions, or a components dir *and* a framework
+# import. Either half of the second condition alone is not enough.
+ATOMIC_HITS="$TMP/gate-atomic"
+: > "$ATOMIC_HITS"
+grep -Ei '\.(jsx|tsx|vue|svelte)$' "$GATE_FILES" >> "$ATOMIC_HITS" || true
+COMPONENT_PATHS="$(grep -Ei '(^|/)components?/' "$GATE_FILES" || true)"
+if [ -n "$COMPONENT_PATHS" ]; then
+  FRAMEWORK_HITS="$(cd "$TARGET" && tr '\n' '\0' < "$GATE_FILES" \
+    | xargs -0 grep -lIE "from ['\"](react|vue|svelte|preact|solid-js|@angular/core)" 2>/dev/null || true)"
+  [ -n "$FRAMEWORK_HITS" ] && printf '%s\n' "$COMPONENT_PATHS" >> "$ATOMIC_HITS"
+fi
+sort -u "$ATOMIC_HITS" -o "$ATOMIC_HITS"
+gate_report atomic "$ATOMIC_HITS"
+
+# idempotency: retry/queue/scheduler/webhook vocabulary in file contents, or
+# migration/deploy/infra paths.
+IDEM_HITS="$TMP/gate-idempotency"
+: > "$IDEM_HITS"
+if [ -s "$GATE_FILES" ]; then
+  (cd "$TARGET" && tr '\n' '\0' < "$GATE_FILES" \
+    | xargs -0 grep -lIEi 'retry|retries|backoff|idempotenc|celery|sidekiq|bullmq|resque|kafka|sqs|pubsub|amqp|rabbit|webhook|cron|scheduler' 2>/dev/null) >> "$IDEM_HITS" || true
+fi
+grep -Ei '(^|/)(migrations?|migrate|deploy|infra|terraform)(/|$)|\.sql$' "$GATE_FILES" >> "$IDEM_HITS" || true
+sort -u "$IDEM_HITS" -o "$IDEM_HITS"
+gate_report idempotency "$IDEM_HITS"
 
 exit 0

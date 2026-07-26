@@ -17,9 +17,18 @@ assert_grep() {
   if grep -q "$2" "$3"; then pass "$1"; else fail "$1 (pattern not found: $2)"; fi
 }
 
+assert_not_grep() {
+  # assert_not_grep <description> <pattern> <file>
+  if grep -q "$2" "$3"; then
+    fail "$1 (pattern found, expected absent: $2 — $(grep -m1 "$2" "$3"))"
+  else
+    pass "$1"
+  fi
+}
+
 # --- fixture repo ---
 FIXTURE="$(mktemp -d)"
-trap 'rm -rf "$FIXTURE" "$FIXTURE.out"' EXIT
+trap 'rm -rf "$FIXTURE" "$FIXTURE".out*' EXIT
 
 git -C "$FIXTURE" init -q
 cat > "$FIXTURE/package.json" <<'EOF'
@@ -38,6 +47,18 @@ EOF
 for i in $(seq 1 400); do
   echo "console.log('line $i');" >> "$FIXTURE/big.js"
 done
+
+# A queue consumer with a retry wrapper: fires the idempotency gate and nothing
+# else. Paired with the absence of any .jsx/.tsx/.vue/.svelte file, this makes one
+# fixture prove the discrimination that matters — the same run fires one lens and
+# withholds the other. A gate that always fires is not a gate.
+mkdir -p "$FIXTURE/workers"
+cat > "$FIXTURE/workers/consumer.js" <<'EOF'
+// consumes from the job queue; retries on failure
+export function handleMessage(msg, retry) {
+  return retry(() => insertRow(msg), { backoff: 200 });
+}
+EOF
 
 # A file containing TODO.
 cat > "$FIXTURE/notes.js" <<'EOF'
@@ -63,6 +84,28 @@ echo "export const x = 1;" > "$FIXTURE/alpha/a.b.js"
 cp "$FIXTURE/alpha/a.b.js" "$FIXTURE/beta/a.b.js"
 echo "export const y = 2;" > "$FIXTURE/alpha/axb.js"
 cp "$FIXTURE/alpha/axb.js" "$FIXTURE/beta/axb.js"
+
+# Two more duplicated basenames differing in case class: C collation sorts
+# uppercase before lowercase ("Zeta" < "apple"), en_US.UTF-8 collation does not.
+# Without a pair like this the locale assertion below passes on a fixture that
+# never exercises the difference — a green test proving nothing.
+echo "export const z = 3;" > "$FIXTURE/alpha/Zeta.js"
+cp "$FIXTURE/alpha/Zeta.js" "$FIXTURE/beta/Zeta.js"
+echo "export const a = 4;" > "$FIXTURE/alpha/apple.js"
+cp "$FIXTURE/alpha/apple.js" "$FIXTURE/beta/apple.js"
+
+# A seeded harness footprint. Per AGENTS.md it is this harness's own output and is
+# never evidence about the target, so no counted section may quote it. Sized and
+# shaped to break every one of them if it leaks: long enough to top "largest files",
+# 600 TODOs against the fixture's 1, and a basename shared with the root adapter so
+# it would surface as a duplication candidate too. Only the "agents dir:" line, whose
+# whole job is to report presence, may mention it.
+mkdir -p "$FIXTURE/.agents"
+: > "$FIXTURE/.agents/AGENTS.md"
+for i in $(seq 1 600); do
+  echo "seeded line $i — TODO: harness output, not repo evidence" >> "$FIXTURE/.agents/AGENTS.md"
+done
+printf '<!-- harness:begin -->\nSee .agents/AGENTS.md\n<!-- harness:end -->\n' > "$FIXTURE/AGENTS.md"
 
 git -C "$FIXTURE" add -A
 git -C "$FIXTURE" -c user.name=fixture -c user.email=fixture@example.com \
@@ -101,6 +144,62 @@ if [ -n "$TODO_COUNT" ] && [ "$TODO_COUNT" -ge 1 ]; then
   pass "todo/fixme markers count >= 1 (got $TODO_COUNT)"
 else
   fail "todo/fixme markers count >= 1 (got '${TODO_COUNT:-none}')"
+fi
+
+# --- footprint: .agents/ is the harness's output, never the target's evidence ---
+# The counted sections must not quote it. Asserting on the path rather than on a
+# count keeps this honest as the fixture grows: "agents dir:" prints a bare
+# ".agents/", so the full path appearing anywhere means a counted section leaked it.
+assert_not_grep "footprint: .agents/ absent from every counted section" \
+  "\.agents/AGENTS\.md" "$OUT"
+# The count itself, so a leak that somehow avoids printing the path still fails: the
+# footprint carries 600 TODOs and the fixture's own code carries exactly 1.
+assert_grep "footprint: todo count is the target's alone" \
+  "^todo/fixme markers: 1 " "$OUT"
+# ...while presence reporting, which is the one line allowed to mention it, still works.
+assert_grep "footprint: presence still reported" \
+  "^agents dir: \.agents/ present" "$OUT"
+
+# --- gates: fires one lens, withholds the other, on the same repo ---
+assert_grep "gates: idempotency FIRED on the queue consumer" \
+  "^gates: idempotency FIRED" "$OUT"
+# Anchored to the gates line, not loose in the report: the path also appears in the
+# inventory and largest-files sections, so an unanchored pattern passes whether or
+# not the gate ever cited anything.
+assert_grep "gates: idempotency evidence names the consumer" \
+  "^gates: idempotency FIRED.*workers/consumer\.js" "$OUT"
+# The assertion that makes the other two mean something: same run, same repo, the
+# other gate declined. Without this, a gate hardwired to fire would pass.
+assert_grep "gates: atomic withheld on a repo with no component UI" \
+  "^gates: atomic not-fired$" "$OUT"
+
+# --- determinism: one tree, two locales, byte-identical facts ---
+# The header calls this script a deterministic fact collector, and audit.md quotes
+# its output verbatim as fact. Determinism therefore has to hold across machines,
+# not just across two runs in one shell — two runs here would share a locale and
+# pass while collation-dependent output is live. Hence two explicit locales.
+# Captured, not piped: `locale -a | grep -q` dies to SIGPIPE under `set -o pipefail`
+# (grep exits on the first match before locale finishes writing), which reports the
+# locale as missing on a machine that has it — the check would skip itself forever.
+LOCALES="$(locale -a 2>/dev/null || true)"
+case "$LOCALES" in
+  *en_US.UTF-8*) HAVE_UTF8=yes ;;
+  *)             HAVE_UTF8=no ;;
+esac
+if [ "$HAVE_UTF8" = yes ]; then
+  OUT_C="$FIXTURE.out.c"
+  OUT_U="$FIXTURE.out.utf8"
+  LC_ALL=C            bash "$AUDIT" "$FIXTURE" > "$OUT_C" 2>&1 || true
+  LC_ALL=en_US.UTF-8  bash "$AUDIT" "$FIXTURE" > "$OUT_U" 2>&1 || true
+  if cmp -s "$OUT_C" "$OUT_U"; then
+    pass "determinism: identical output under C and en_US.UTF-8"
+  else
+    fail "determinism: identical output under C and en_US.UTF-8 (first diff: $(diff "$OUT_C" "$OUT_U" | head -4 | tr '\n' ' '))"
+  fi
+else
+  # Not a pass. An assertion that did not run has no result, and saying so is the
+  # whole point of the check.
+  printf 'SKIP: %s\n' "determinism: en_US.UTF-8 locale unavailable on this machine"
 fi
 
 # --- nonexistent path exits 2 ---

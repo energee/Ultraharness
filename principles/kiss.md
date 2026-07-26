@@ -44,6 +44,3 @@ Smallest intervention first:
 - A short function that's genuinely hard to follow is worse than a longer function that
   reads linearly — line count is a heuristic, not the goal.
 
-## Finding format
-
-`[<principle>/<severity high|med|low>] <file:line> — <what> — <smallest fix>`

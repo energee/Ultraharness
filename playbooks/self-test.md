@@ -45,9 +45,10 @@ Create a fresh directory in a temp dir and `git init` it. It must have, at minim
 - **No lens gate may fire on it.** This fixture is the no-fire case: keep it free of
   retry/queue/webhook/cron/migration/deploy constructs and of component-UI files
   (`.jsx`, `.tsx`, `.vue`, `.svelte`, a `components/` directory with a framework
-  import). Run both lenses' gate commands against it before seeding and confirm each
-  comes back empty — if one fires, adjust the fixture, because step 3 asserts a
-  no-lens footprint and a fixture that quietly fires a gate would mask a real defect.
+  import). Run `bash scripts/audit-checks.sh <fixture>` before seeding and confirm both
+  its `gates:` lines read `not-fired` — if one fires, adjust the fixture, because step 3
+  asserts a no-lens footprint and a fixture that quietly fires a gate would mask a real
+  defect.
 
 Commit everything on the fixture's current branch, so seeding starts from a clean
 tree. Record the fixture path; every command below runs against it.
@@ -127,6 +128,11 @@ gate and nothing that fires the atomic gate — e.g. a queue consumer that handl
 message and inserts a row, with a retry wrapper around it, and no component-UI files.
 Commit it. Run `playbooks/seed.md` against it as written, then assert:
 
+- The script said so before the agent did: the run's `audit-checks.sh` report reads
+  `gates: idempotency FIRED` naming a real path, and `gates: atomic not-fired`. This is
+  the assertion that separates "the gate discriminated" from "the agent guessed
+  correctly" — the seeded footprint below is only trustworthy if it traces to this line.
+
 - `<fixture2>/.agents/lenses/idempotency.md` exists and is byte-identical to
   `<harness>/templates/agents-dir/lenses/idempotency.md`.
 - `<fixture2>/.agents/lenses/atomic-design.md` does **not** exist. This is the
@@ -155,9 +161,14 @@ that has never been executed is unverified. Run exactly one pass.
 
 Build a third fixture, `<fixture3>`: a manifest and a **real test command whose suite
 asserts something and is green at run start** (a testless fixture would route every
-verdict to PASS (unverified-by-tests) and prove nothing about the gate), plus one
-planted finding a minimal fix can close — the duplicated block from step 2 is enough.
-Commit it, seed it, and audit it, so the ledger carries a real queue.
+verdict to PASS (unverified-by-tests) and prove nothing about the gate), plus **two**
+planted findings a minimal fix can close — the duplicated block from step 2, and a
+second one like it in another pair of files. Commit it, seed it, and audit it, so the
+ledger carries a real queue.
+
+Two, not one, because step 5e resumes this same fixture and needs an entry still `open`
+after this step closes one. Relying on the audit to incidentally raise a second finding
+would make that step's setup depend on a judgment call this playbook does not control.
 
 Then run `playbooks/improve.md` against it with the safety envelope overridden to
 **1 finding**, and assert, in order:
@@ -296,9 +307,10 @@ which nothing else here covers.
 
 ### 6. Delete the fixture
 
-Remove both temp dirs — `<fixture>` and `<fixture2>`. Leaving one behind means the
-next self-test silently runs against a pre-seeded repo and stops testing the seed path
-at all.
+Remove every temp dir this run created — `<fixture>`, `<fixture2>`, and `<fixture3>`.
+Leaving one behind means the next self-test silently runs against a pre-seeded repo and
+stops testing the seed path at all. `<fixture3>` also carries git worktrees and
+`harness/*` branches from step 5b; deleting its directory takes those with it.
 
 ### 7. Fix what the run broke
 

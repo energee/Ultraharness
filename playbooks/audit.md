@@ -52,13 +52,15 @@ you need the reasoning behind a rule). Then:
 - Read each of the top-10 largest files from the script's `largest files` section.
 - Read each pair listed under `duplication candidates` — they are candidates, not
   verdicts; verify before flagging.
-- Skip harness-owned entries in both lists, per the footprint rule in
-  `<harness>/AGENTS.md`. On a seeded repo they dominate both (the two pointer files
-  are ~100% identical by construction). Still quote them in the script's report; just
-  never make them a finding. Skip a root `AGENTS.md` / `CLAUDE.md` whole only when the
-  pointer block is all it contains. The rule also governs reference counts: a symbol
-  named only from `.agents/` has zero real callers, because the mention is your own
-  note about the repo, not the repo.
+- The script already drops `.agents/` from both lists, so nothing there needs skipping
+  by hand. What it cannot drop is the root pair: a bare `AGENTS.md` / `CLAUDE.md`
+  holding only the pointer block is ~100% identical by construction and will surface as
+  a duplication candidate. That is harness output — quote it in the script's report,
+  never make it a finding. Skip such a file whole only when the pointer block is all it
+  contains; anything the target already had is the repo's own, and is evidence like any
+  other file. The footprint rule also governs reference counts: a symbol named only from
+  `.agents/` has zero real callers, because the mention is your own note about the repo,
+  not the repo.
 - Apply all four rubrics (DRY, KISS, SOLID, YAGNI), including each rubric's
   "do NOT apply when" exclusions, and the `## Guard precedence` section that governs
   all four: never emit a removal finding against a guard on a zero-reference argument.
