@@ -78,7 +78,10 @@ commented-out code, and any edit that weakens a test or assertion.
 
 **Prefer fresh eyes.** If your environment can start a fresh context — a subagent, a
 second session — hand it the diff and the one-sentence claim from probe item 1, and
-have it answer those same checks. Nothing else: not the plan, not your reasoning, not
+have it answer those same checks. Hand the diff over as **output, not prose**: write
+`git diff` to a file and give the fresh context that path. A diff retyped into a prompt
+is a summary wearing a diff's clothes, and one mistyped line spends the whole review on
+your typo instead of on the change — the exact substitution this step exists to prevent. Nothing else: not the plan, not your reasoning, not
 this conversation. Whoever wrote the change is its worst reader — they know what the
 code was *meant* to do and read that intent into hunks that do not contain it, which
 is the failure this gate exists to catch. Its answer does not replace your own read; a

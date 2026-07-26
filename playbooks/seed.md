@@ -82,7 +82,11 @@ read recent `git -C <target> log` output). Rules of evidence:
 - Every claim needs **at least 2 corroborating examples** from the repo. One example
   is an anecdote, not a convention.
 - Cite a concrete file (or commit) for each claim, as the template's own comment
-  demands.
+  demands, and **open each citation as you write it** to confirm it resolves. A claim
+  whose citation was wrong the day it was written is invisible to every later staleness
+  check: `git diff <stamp>..HEAD` finds what moved, never what was false at birth. Such
+  a citation survives pass after pass, because each one sees an unchanged file and
+  correctly leaves the claim alone.
 - If a section has nothing observable, write `nothing observed yet` rather than
   inventing content.
 
