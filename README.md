@@ -130,12 +130,17 @@ believed.
 
 ## Rubrics and lenses
 
-Four rubrics apply to every repo: **DRY**, **KISS**, **SOLID**, **YAGNI**. Each states
-how to spot it, how to fix it (smallest intervention first), and — just as important —
-when **not** to apply it, so deliberate choices don't get flagged as defects.
+Five rubrics apply to every repo: **DRY**, **KISS**, **SOLID**, **YAGNI**, and
+**fail-fast**. Each states how to spot it, how to fix it (smallest intervention first),
+and — just as important — when **not** to apply it, so deliberate choices don't get
+flagged as defects.
+
+Fail-fast is the odd one out: swallowed errors, silent defaults on required config, and
+errors flattened into `null` are invisible to `audit-checks.sh` — no metric reports
+them — so it is the rubric that proves an audit read code rather than quoted facts.
 
 **Lenses** are conditional rubrics for things not every repo has. Each adds one
-section the four rubrics don't have: a **gate**, a condition evaluated against your repo
+section the five rubrics don't have: a **gate**, a condition evaluated against your repo
 at seed time that decides whether the lens applies at all. Gates are decided by
 `scripts/audit-checks.sh`, not by the agent — it prints one line per lens, and the same
 repo therefore gates the same way on every machine and in every session:
@@ -193,7 +198,7 @@ from, and neither exists until you build it.
 AGENTS.md                 # the front door: routes by decision to one playbook
 CLAUDE.md                 # thin shim: @AGENTS.md plus Claude-specific deltas
 playbooks/                # seed, audit, improve, verify, self-test
-principles/               # DRY, KISS, SOLID, YAGNI — full-form rubrics
+principles/               # DRY, KISS, SOLID, YAGNI, fail-fast — full-form rubrics
 lenses/                   # conditional rubrics, each with a Gate section
 templates/agents-dir/     # the .agents/ skeleton seed.md instantiates
 scripts/audit-checks.sh   # deterministic fact collector (git + grep + awk only)

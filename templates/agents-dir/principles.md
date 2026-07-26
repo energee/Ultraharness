@@ -89,6 +89,32 @@ Do NOT apply when:
 - The class is merely long but cohesive — SRP is about reasons to change, not lines.
 - It's a small internal helper; DIP matters at architectural seams, not everywhere.
 
+## Fail fast — an operation that cannot do its job says so immediately
+
+Spot it:
+- Empty or comment-only catch: `catch {}`, `except: pass`, `rescue nil`,
+  `if err != nil { }`. Highest-yield single grep.
+- Overbroad catch (`except Exception:`, `catch (Throwable)`) around a block where one
+  call can realistically fail.
+- Log-and-continue where the code cannot actually continue correctly.
+- Errors flattened to sentinels — `null`/`nil`/`-1`/`""` where the caller cannot tell
+  "no result" from "it broke".
+- Required config read with a silent default (`getenv("API_KEY", "")`, `?? ""`); the
+  missing credential surfaces as a 401 three layers away.
+- Validation deferred past a trust boundary; async results never awaited or joined.
+
+Do NOT apply when:
+- A retry loop, supervisor, or event pump must survive one failure — provided the error
+  is recorded and retries are bounded.
+- It's a top-level handler turning an exception into a response or exit code. That is
+  where propagation is supposed to stop.
+- The feature is genuinely optional and the system still meets its contract without it
+  (analytics key, cache). The test is the contract, not the presence of a default.
+- It's cleanup in `finally`/`defer` — suppressing there to preserve the original
+  failure is correct.
+- The sentinel is the language idiom and the caller must check it: Go's `(T, error)` is
+  fail-fast unless the error is discarded with `_`.
+
 ## YAGNI — build for today's requirement, not a possible one
 
 Spot it:
