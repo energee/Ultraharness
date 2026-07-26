@@ -195,7 +195,18 @@ git -C "$FIXTURE2" add -A
 git -C "$FIXTURE2" -c user.name=fixture -c user.email=fixture@example.com \
   commit -qm "ui fixture"
 OUT2="$FIXTURE.out.ui"
-bash "$AUDIT" "$FIXTURE2" > "$OUT2" 2>&1
+# Guarded, like every other invocation here. Unguarded under `set -e`, a nonzero exit
+# from audit-checks.sh kills this script outright: the run stops mid-suite, every
+# assertion below never executes, and no summary line prints. A suite that aborts
+# reports nothing — which reads far more like "finished" than a FAIL does.
+set +e
+bash "$AUDIT" "$FIXTURE2" > "$OUT2" 2>&1; RC_UI=$?
+set -e
+if [ "$RC_UI" -eq 0 ]; then
+  pass "exit code 0 on the component-UI fixture"
+else
+  fail "exit code 0 on the component-UI fixture (got $RC_UI)"
+fi
 assert_grep "gates: atomic FIRED on a component-UI repo" \
   "^gates: atomic FIRED" "$OUT2"
 assert_grep "gates: atomic evidence names the component" \
