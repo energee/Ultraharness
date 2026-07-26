@@ -68,9 +68,17 @@ verifying the test command by running it. Then assert the exact footprint:
   fixture fires no lens gate (step 2 built it that way), **no `lenses/` directory**.
 - The no-fire fixture pays nothing for the lens machinery: no `<fixture>/.agents/lenses/`
   directory, no `## Lenses` section in `<fixture>/.agents/AGENTS.md`, and no lens *file*
-  content anywhere under `.agents/` — `grep -rl 'Gate — does this lens apply' <fixture>/.agents/`
+  content anywhere under `.agents/` — `grep -rl 'condensed lens' <fixture>/.agents/`
   returns nothing. Zero added lines in the common case is this design's own claim; this
   is where it is checked.
+
+  Grep a phrase the *seeded* file contains. `condensed lens` is line 1 of both files in
+  `templates/agents-dir/lenses/`, which are the only lens files seeding ever copies. An
+  earlier version grepped `Gate — does this lens apply`, which appears solely in the
+  full-form lenses under `<harness>/lenses/` — so it matched nothing even when a lens
+  *had* leaked, and would have passed on the very defect it was written to catch. Check a
+  new assertion against the artifact it inspects, not against the file you happened to be
+  reading when you wrote it.
 
   Not `grep -ril lens`. That was the assertion here until a run showed it cannot pass:
   `principles.md` is copied byte-identical whether or not a gate fired, so its guard
