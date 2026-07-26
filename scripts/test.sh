@@ -28,7 +28,7 @@ assert_not_grep() {
 
 # --- fixture repo ---
 FIXTURE="$(mktemp -d)"
-trap 'rm -rf "$FIXTURE" "$FIXTURE".out*' EXIT
+trap 'rm -rf "$FIXTURE" "$FIXTURE".out* "$FIXTURE".ui' EXIT
 
 git -C "$FIXTURE" init -q
 cat > "$FIXTURE/package.json" <<'EOF'
@@ -173,6 +173,36 @@ assert_grep "gates: idempotency evidence names the consumer" \
 assert_grep "gates: atomic withheld on a repo with no component UI" \
   "^gates: atomic not-fired$" "$OUT"
 
+# --- gates, the other two directions: a second repo that fires atomic and not
+# idempotency. One fixture can only ever show each gate in one direction, and
+# README.md states the rule as "a fixture it fires on AND a fixture it withholds
+# from" — for BOTH gates, not one each. Without this, deleting the .tsx branch from
+# the atomic gate passes the whole suite.
+FIXTURE2="$FIXTURE.ui"
+mkdir -p "$FIXTURE2/src/components"
+git -C "$FIXTURE2" init -q
+cat > "$FIXTURE2/package.json" <<'EOF'
+{ "name": "ui-fixture", "version": "1.0.0", "scripts": { "test": "echo tests-ok" } }
+EOF
+# Deliberately free of retry/queue/webhook/cron/scheduler/migration/deploy/.sql
+# vocabulary, so idempotency has nothing to fire on. Keep it that way.
+cat > "$FIXTURE2/src/components/Button.tsx" <<'EOF'
+export function Button({ label }: { label: string }) {
+  return <button>{label}</button>;
+}
+EOF
+git -C "$FIXTURE2" add -A
+git -C "$FIXTURE2" -c user.name=fixture -c user.email=fixture@example.com \
+  commit -qm "ui fixture"
+OUT2="$FIXTURE.out.ui"
+bash "$AUDIT" "$FIXTURE2" > "$OUT2" 2>&1
+assert_grep "gates: atomic FIRED on a component-UI repo" \
+  "^gates: atomic FIRED" "$OUT2"
+assert_grep "gates: atomic evidence names the component" \
+  "^gates: atomic FIRED.*Button\.tsx" "$OUT2"
+assert_grep "gates: idempotency withheld on a repo with no queue or retry" \
+  "^gates: idempotency not-fired$" "$OUT2"
+
 # --- determinism: one tree, two locales, byte-identical facts ---
 # The header calls this script a deterministic fact collector, and audit.md quotes
 # its output verbatim as fact. Determinism therefore has to hold across machines,
@@ -189,9 +219,21 @@ esac
 if [ "$HAVE_UTF8" = yes ]; then
   OUT_C="$FIXTURE.out.c"
   OUT_U="$FIXTURE.out.utf8"
-  LC_ALL=C            bash "$AUDIT" "$FIXTURE" > "$OUT_C" 2>&1 || true
-  LC_ALL=en_US.UTF-8  bash "$AUDIT" "$FIXTURE" > "$OUT_U" 2>&1 || true
-  if cmp -s "$OUT_C" "$OUT_U"; then
+  set +e
+  LC_ALL=C            bash "$AUDIT" "$FIXTURE" > "$OUT_C" 2>&1; RC_C=$?
+  LC_ALL=en_US.UTF-8  bash "$AUDIT" "$FIXTURE" > "$OUT_U" 2>&1; RC_U=$?
+  set -e
+  # Exit status first. Swallowing both with `|| true` and comparing only the bytes
+  # let this assertion pass on a script that died early under BOTH locales — two
+  # identical error messages compare equal. A crash is not determinism.
+  if [ "$RC_C" -ne 0 ] || [ "$RC_U" -ne 0 ]; then
+    fail "determinism: both locale runs exit 0 (C=$RC_C utf8=$RC_U)"
+  # Compared against $OUT, the known-good run every assertion above was made against,
+  # not just against each other: two runs that agree with each other but not with that
+  # report are still a regression.
+  elif ! cmp -s "$OUT" "$OUT_C"; then
+    fail "determinism: C-locale run differs from the verified report (first diff: $(diff "$OUT" "$OUT_C" | head -4 | tr '\n' ' '))"
+  elif cmp -s "$OUT_C" "$OUT_U"; then
     pass "determinism: identical output under C and en_US.UTF-8"
   else
     fail "determinism: identical output under C and en_US.UTF-8 (first diff: $(diff "$OUT_C" "$OUT_U" | head -4 | tr '\n' ' '))"

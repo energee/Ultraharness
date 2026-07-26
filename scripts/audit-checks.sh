@@ -282,6 +282,7 @@ grep -Ev '(^|/)CHANGELOG|(^|/)docs/|\.(md|rst|txt|adoc)$' "$CODE_FILES" > "$GATE
 
 gate_report() {
   # gate_report <lens-slug> <hits-file>
+  local N EV UNIT
   N="$(wc -l < "$2" | tr -d ' ')"
   if [ "$N" -gt 0 ]; then
     EV="$(head -3 "$2" | tr '\n' ',' | sed -e 's/,$//' -e 's/,/, /g')"

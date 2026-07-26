@@ -73,7 +73,7 @@ you need the reasoning behind a rule). Then:
     findings under the other four and none under fail-fast should say whether it
     looked, rather than leave the absence to be read as a clean result.
 - Read `<target>/.agents/lenses/*.md` if that directory exists, and apply each lens
-  alongside the four — same severity anchors, same ranking rules, same "do NOT apply
+  alongside the five — same severity anchors, same ranking rules, same "do NOT apply
   when" discipline, and the same guard precedence, which binds a lens finding exactly
   as it binds a rubric one. A lens is in that directory because its gate fired at seed
   time: **a lens that is present applies.** There is no second judgment call here — do

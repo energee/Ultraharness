@@ -89,6 +89,26 @@ Do NOT apply when:
 - The class is merely long but cohesive — SRP is about reasons to change, not lines.
 - It's a small internal helper; DIP matters at architectural seams, not everywhere.
 
+## YAGNI — build for today's requirement, not a possible one
+
+Spot it:
+- Unused exports, params, or feature flags — zero non-definition references repo-wide.
+- Config options with exactly one value ever set across all environments.
+- Abstractions with a single implementation and no committed second one.
+- "For future use" / "will be needed when" comments on code with no current caller.
+- Feature flags parked at 100% or 0% with no in-progress migration.
+
+Do NOT apply when:
+- It's validation/sanitization at a trust boundary — the boundary is the
+  requirement, not the caller count.
+- It's a calibration knob or hardware/sensor config — variance across units is a
+  real, current requirement even with one value set today.
+- It's an accessibility affordance — its users don't show up in call-site greps.
+- It's a single-implementation test seam exercised by an actual test today — that's
+  DIP, keep it (same precedence rule as under SOLID).
+- It backs persisted data — a column, table, migration, or serialized field.
+  Unreferenced is never sufficient here; rows outlive the code that reads them.
+
 ## Fail fast — an operation that cannot do its job says so immediately
 
 Spot it:
@@ -115,22 +135,3 @@ Do NOT apply when:
 - The sentinel is the language idiom and the caller must check it: Go's `(T, error)` is
   fail-fast unless the error is discarded with `_`.
 
-## YAGNI — build for today's requirement, not a possible one
-
-Spot it:
-- Unused exports, params, or feature flags — zero non-definition references repo-wide.
-- Config options with exactly one value ever set across all environments.
-- Abstractions with a single implementation and no committed second one.
-- "For future use" / "will be needed when" comments on code with no current caller.
-- Feature flags parked at 100% or 0% with no in-progress migration.
-
-Do NOT apply when:
-- It's validation/sanitization at a trust boundary — the boundary is the
-  requirement, not the caller count.
-- It's a calibration knob or hardware/sensor config — variance across units is a
-  real, current requirement even with one value set today.
-- It's an accessibility affordance — its users don't show up in call-site greps.
-- It's a single-implementation test seam exercised by an actual test today — that's
-  DIP, keep it (same precedence rule as under SOLID).
-- It backs persisted data — a column, table, migration, or serialized field.
-  Unreferenced is never sufficient here; rows outlive the code that reads them.
