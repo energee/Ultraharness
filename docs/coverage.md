@@ -26,4 +26,4 @@ lines. The 2026-07-26 baseline follows the table-class removal and the resume sp
 
 | date | audit | improve | resume | seed | self-test | verify | total |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-07-26 | 205 | 378 | 69 | 300 | 405 | 169 | 1526 |
+| 2026-07-26 | 205 | 388 | 69 | 300 | 454 | 169 | 1585 |

@@ -80,7 +80,8 @@ gap blocked it — context, capability, authority, proof, or feedback — and wh
 unpark it. Nothing is silently dropped, and no run is reported finished with work
 quietly removed from the queue. The triage for a run another session left mid-finding
 lives in `playbooks/resume.md`, read only when the ledger shows one — the common path
-never loads it.
+never loads it. Every real run appends one line to `docs/runs.md` on exit — the
+harness's durable record of what it has actually done in the wild.
 
 **`verify.md` — the evidence gate.** Nothing passes on memory, summaries, or a
 subagent's report. Run the commands fresh, read every hunk of the diff, then write one
@@ -211,6 +212,7 @@ scripts/audit-checks.sh   # deterministic fact collector (git + grep + awk only)
 scripts/test.sh           # bash tests for the fact collector + rubric sync tripwire
 docs/ablations.md         # which instruction rules have been tested, and how
 docs/coverage.md          # hard-path rotation record + playbook prose budget
+docs/runs.md              # one line per real improve run — the field record
 ```
 
 ## Testing the harness itself
@@ -239,4 +241,8 @@ route, the authority envelope, the mid-pass resume — run one per self-test on 
 rotation, against manufactured ledger state, with `docs/coverage.md` as the record of
 which have actually run. The same file tracks a per-run prose budget of the
 playbooks' line counts, so growth has to be justified rather than discovered. A green
-self-test is evidence about what it ran, and nothing else.
+self-test is evidence about what it ran, and nothing else — including about who ran
+it: instructions cannot force compliance, so a self-test is evidence about the agent
+and model tier that executed it as much as about the harness. Run it with the same
+agent you intend to point at your repos before trusting that agent with an
+unattended improve run.

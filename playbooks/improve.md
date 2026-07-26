@@ -287,6 +287,16 @@ loop, envelope permitting.
 
 ## Stop conditions
 
+### Run log — every exit
+
+However a run ends — the queue drained and confirmed empty (step 9), an envelope
+trip, or any stop below — append one line to `<harness>/docs/runs.md` before the
+final report: date, target, findings done / parked / still open, the verdict mix,
+and anything step 8's "say what you wished you had" produced. One line per run, not
+per pass. Fixtures built by `playbooks/self-test.md` are not runs — self-test improve
+passes skip this line. The log is telemetry about the harness, so it lives in the
+harness repo, never in the target.
+
 ### Authority envelope
 
 The safety envelope below bounds how *much* a run does; this bounds *what* it may do.

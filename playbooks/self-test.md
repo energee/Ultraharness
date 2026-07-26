@@ -229,7 +229,9 @@ Then run `playbooks/improve.md` against it with the safety envelope overridden t
 
 Assert the negative too, the way step 5a does: the run stopped after one finding
 because the envelope said 1, reported scope remaining, and left the still-`open`
-entries open. An envelope that never stops a run is not an envelope.
+entries open. An envelope that never stops a run is not an envelope. And assert the
+run-log exclusion: `<harness>/docs/runs.md` gained no line from this run — fixtures
+are not runs, per improve.md's Run log rule.
 
 ### 5c. Ablate one anti-rationalization row
 
