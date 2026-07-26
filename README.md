@@ -208,7 +208,7 @@ principles/               # DRY, KISS, SOLID, YAGNI, fail-fast — full-form rub
 lenses/                   # conditional rubrics, each with a Gate section
 templates/agents-dir/     # the .agents/ skeleton seed.md instantiates
 scripts/audit-checks.sh   # deterministic fact collector (git + grep + awk only)
-scripts/test.sh           # bash tests for the fact collector
+scripts/test.sh           # bash tests for the fact collector + rubric sync tripwire
 docs/ablations.md         # which instruction rules have been tested, and how
 docs/coverage.md          # hard-path rotation record + playbook prose budget
 ```
@@ -216,7 +216,10 @@ docs/coverage.md          # hard-path rotation record + playbook prose budget
 ## Testing the harness itself
 
 Run `bash scripts/test.sh` from this repo's root — the bash tests for
-`scripts/audit-checks.sh`. Every assertion prints `PASS` and the run exits 0.
+`scripts/audit-checks.sh`, plus a sync tripwire that pins each full-form rubric to
+its condensed twin by hash: editing either fails the suite until the pair is
+deliberately re-synced, so the designed-in duplication cannot drift silently. Every
+assertion prints `PASS` and the run exits 0.
 
 For the end-to-end check, point an agent at `playbooks/self-test.md`. It seeds,
 re-seeds, audits, proves the lens gates both fire *and* withhold, runs a full

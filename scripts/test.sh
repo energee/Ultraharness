@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# test.sh — bash test harness for scripts/audit-checks.sh.
+# test.sh — bash test harness for scripts/audit-checks.sh, plus the rubric sync
+# tripwire pinning full-form rubrics to their condensed twins.
 # Builds a throwaway fixture repo in a temp dir, runs audit-checks.sh against it,
 # and asserts on the printed facts with grep. Prints PASS/FAIL per assertion and
 # exits nonzero if any assertion fails. No dependencies beyond git + coreutils.
@@ -25,6 +26,36 @@ assert_not_grep() {
     pass "$1"
   fi
 }
+
+# --- rubric sync tripwire ---
+# The full-form rubrics (principles/, lenses/) and their condensed twins
+# (templates/agents-dir/) are deliberate duplication — README says why — which
+# leaves them free to drift apart silently. Each hash below pins one file at its
+# last deliberate sync. Editing any of them fails here until the hash is updated:
+# re-read the twin, re-sync it if the change affects it, then paste the new hash
+# the failure message prints. That converts silent drift into a red test at the
+# moment of the edit — the same trick recorded-at plays on targets, pointed inward.
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+check_sync() {
+  # check_sync <repo-relative file> <sha256 at last sync>
+  local actual
+  actual="$(shasum -a 256 "$REPO_ROOT/$1" | awk '{print $1}')"
+  if [ "$actual" = "$2" ]; then
+    pass "rubric sync: $1 unchanged since last sync"
+  else
+    fail "rubric sync: $1 changed — re-sync its twin if needed, then record $actual"
+  fi
+}
+check_sync principles/dry.md        e1cc30fc1b1fd14e7160d235b096a7e363b367a1bd5172e45b6986a9448016d8
+check_sync principles/kiss.md       81d07de626fea0b0acd751c4f0e4c53ddfe4c7ddc249a4bb15179a321b4865cf
+check_sync principles/solid.md      1c29917458db8535e91a311aed23d99b9871a56c875384611741c8b387ecce71
+check_sync principles/yagni.md      c724c113841a6cf80ee892eb8cc9df6986ba267fbcbf9fdb55b434f7814d77f9
+check_sync principles/fail-fast.md  38b1e68fa1d765accf3de14ce531b0ea738be8fd8dcf31aa81ae1381feb2770b
+check_sync lenses/atomic-design.md  033a38bfb0b266577cf2cf30fc33b2c13a283f1c25ece79ce135d6c5e6f8451f
+check_sync lenses/idempotency.md    f6cc63250e4ab2e5c9fb9d21ae4e1a9bc1c1800b4697c5df13d9022c80223948
+check_sync templates/agents-dir/principles.md            e5777b57c21c05d0aa55a62c16a1f4f4a7fb6160c7672e0956325e54102980d8
+check_sync templates/agents-dir/lenses/atomic-design.md  40f7e65a40d11872f0e599c638c84556dad1f2510690daa3503e6ae87c80f686
+check_sync templates/agents-dir/lenses/idempotency.md    23b55a5b1c6b1fe94825816dc1541a16057d63ad4765ef7670e2f264e2647e68
 
 # --- fixture repo ---
 FIXTURE="$(mktemp -d)"
