@@ -14,16 +14,9 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
 2. The target is seeded: `<target>/.agents/` exists with `ledger.md`,
    `principles.md`, and `conventions.md`. If not, run `playbooks/seed.md` first.
 3. Read the ledger top to bottom. Entries with status `in-progress` mean a previous
-   run died mid-finding — resume those first (see Workflow step 1). Never start
-   fresh work while an `in-progress` entry sits unexamined. This read also tells
-   item 4 whether this is a resumed run.
-
-   On a resumed run, say in your first report what the ledger told you — the entry you
-   are picking up, its status, its attempts — **and what it failed to tell you**: what
-   you had to reconstruct from the worktree, the diff, or the branch tip because no
-   entry recorded it. The second half is the useful half. The ledger is the whole
-   handoff, so every gap you had to fill is a defect in its format, and one nobody can
-   see from inside the session that wrote it.
+   run died mid-finding — read `<harness>/playbooks/resume.md` and follow its triage
+   before starting anything else. Never start fresh work while an `in-progress` entry
+   sits unexamined. This read also tells item 4 whether this is a resumed run.
 4. **Base branch.** Read the ledger's `Run state` block. A `- base branch:` still
    holding the seeded placeholder — any angle-bracket `<...>` value — is not a
    recorded value; treat it as absent. Then:
@@ -73,38 +66,10 @@ Loop the following. One pass = one finding.
 ### 1. Get the queue
 
 - If the ledger has `open` or `in-progress` entries, that is your queue — do not
-  re-audit first. An `in-progress` entry is resumed at whatever step its worktree
-  and attempts count indicate: if its worktree
-  `<target>/.agents/worktrees/<finding-slug>/` exists, work out where the pass died
-  from the **worktree status and the branch tip's message** first; topology alone
-  cannot tell you. In the normal case every merge here fast-forwards — step 3 cuts the
-  branch from base and nothing commits to base until step 8 — so a landed fix leaves
-  base tip == branch tip, the same shape as a branch that never committed anything.
-  `--merged` says "merged" for both, and identity with base's tip proves nothing.
-  (A branch left over from an interrupted run can be stale enough that later passes
-  moved base; step 7 handles that merge.)
-
-  Run `git -C <worktree> add -AN` (so new files show) then
-  `git -C <worktree> status --porcelain`, and evaluate these **in order**, taking the
-  first that matches:
-  - **Non-empty** — the pass died mid-fix and its work is that uncommitted diff.
-    Inspect it and continue from fix or verify.
-  - **Empty, and the branch tip's first line begins `fix(<this finding's slug>):`**
-    (step 7 mandates exactly that form): this pass committed its fix. Match the
-    closing `):` too — a bare substring test also matches a sibling finding whose slug
-    merely extends this one (`dup-blocks` inside `dup-blocks-tests`), and that
-    sibling's commit read as this pass's own is the one misfire that silently marks a
-    finding `done` with no fix ever written. Only now does topology decide which — if
-    that commit is reachable from the base branch it landed, so jump to step 7's
-    ledger update; if it is not, the merge never happened, so resume at step 7's merge.
-  - **Empty, and the branch tip's first line does not begin `fix(<this finding's
-    slug>):`** — the tip belongs to some earlier pass, so this one never committed
-    anything. Treat it as `open` and restart the pass. Do not test this by comparing
-    the branch tip against base's tip: after a fast-forward they match on a landed fix
-    too.
-
-  If no worktree exists, treat it as `open` and restart the pass (increment nothing —
-  attempts count only completed fix attempts).
+  re-audit first. An `in-progress` entry is resumed at whatever step the triage in
+  `<harness>/playbooks/resume.md` indicates — follow it rather than judging from
+  branch topology; merges here normally fast-forward, so a landed fix and a branch
+  that never committed anything look identical from topology alone.
 - If the ledger has no open entries (first run, or queue drained), run
   `playbooks/audit.md` on the target. It writes ranked `open` entries and a top-3
   queue into the ledger.
@@ -180,20 +145,10 @@ Create a worktree for this one finding at
 `harness/<finding-slug>`, branched from the run's base branch (readiness step 4).
 One finding, one worktree, one branch. All fix work happens inside it.
 
-Arriving here from either of step 1's restart routes, the worktree or the branch — or
-both — may already exist while holding no work. Do not improvise; take the case that
-applies:
-
-- **Both exist**: reset the branch to the current base branch from *inside* the
-  worktree (`git -C <worktree> reset --hard <base>`). `git branch -f` refuses while a
-  worktree has that branch checked out. Then reuse the worktree.
-- **Branch exists but its worktree does not**: add a worktree onto the existing branch,
-  naming it *without* `-b` — `-b` fatals on a name that already exists — then reset as
-  above.
-- **Neither exists**: the normal path above.
-
-Deleting whatever exists and re-cutting both is always a valid substitute. Either way
-the pass starts from current base, so step 7 has only this pass's fix to merge.
+Arriving here from one of `playbooks/resume.md`'s restart routes, the worktree or the
+branch — or both — may already exist while holding no work. Follow that file's
+"Reusing a leftover worktree or branch" rules rather than improvising; either way the
+pass starts from current base, so step 7 has only this pass's fix to merge.
 
 ### 4. Fix
 
@@ -229,12 +184,13 @@ Commit the fix on the finding's branch first — an uncommitted worktree has not
 merge — with a first line beginning exactly `fix(<finding-slug>): ` and no
 Co-Authored-By line. Read step 8's docs bullet **before** making that commit: the
 `conventions.md` corrections it asks for belong in *this* commit, and by the time you
-reach step 8 this branch is merged and gone. That form is not decoration: step 1's resume path matches it, with
+reach step 8 this branch is merged and gone. That form is not decoration: the resume
+triage (`playbooks/resume.md`) matches it, with
 the closing `):`, to tell this pass's commit from an earlier pass's. A message without
 it leaves a resumed run unable to tell a committed fix from an untouched branch, and a
 looser form lets a sibling slug that extends this one match instead. On a resume that
-already carries its commit (step
-1's second state), there is nothing left to commit: skip straight to the merge, and
+already carries its commit (the
+triage's second state), there is nothing left to commit: skip straight to the merge, and
 never manufacture an empty commit to satisfy this sentence. Then merge the branch into
 the run's base branch,
 which requires the target checked out on it (readiness step 4 guaranteed that). If the
@@ -250,7 +206,7 @@ pass that fixed one of two citations and wrote "citations" plural leaves the nex
 session believing the work is finished. The ledger
 must never claim less than reality: a run that dies between merge and ledger write
 would otherwise leave a landed fix marked `in-progress` with no worktree, which the
-resume path in step 1 cannot distinguish from unstarted work. Only after the ledger
+resume triage (`playbooks/resume.md`) cannot distinguish from unstarted work. Only after the ledger
 says `done`, delete the worktree and the branch.
 
 ### 8. Checkpoint
@@ -374,7 +330,7 @@ instead, and its attempts are kept as evidence — a human resolving an `authori
 reads them to see what was already tried. Keeping them means **committing** them, not
 just leaving the worktree: commit the last attempt on the finding's branch with a
 first line beginning `parked(<finding-slug>): ` — deliberately not the `fix(` form, so
-step 1's resume path cannot mistake it for a landed fix — and record its **commit SHA**
+the resume triage cannot mistake it for a landed fix — and record its **commit SHA**
 in the ruling. The SHA, not the branch name: step 3 resets `harness/<finding-slug>` and
 step 7 deletes it, so the branch stops pointing at the attempts the moment anyone
 unparks the finding, which is exactly when someone follows the pointer. An uncommitted

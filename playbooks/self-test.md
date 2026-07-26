@@ -331,7 +331,8 @@ Assert:
   the format under step 7, not the prompt.
 
 Do the same from a mid-pass death if you want the harder case: kill the run with a
-worktree left dirty, then hand off. That exercises step 1's three worktree states,
+worktree left dirty, then hand off. That exercises `playbooks/resume.md`'s three
+worktree states,
 which nothing else here covers.
 
 ### 6. Delete the fixture
@@ -365,7 +366,7 @@ This playbook exercises `seed.md` and `audit.md` end to end, and **one** pass of
 `improve.md`/`verify.md` (step 5b), against real fixtures.
 
 Step 5e covers the clean handoff between passes; its optional mid-pass variant is the
-only coverage of step 1's three worktree states, and it is optional, so treat the
+only coverage of `playbooks/resume.md`'s three worktree states, and it is optional, so treat the
 **resume** path as covered only if you ran it.
 
 Still uncovered, and so not evidence about anything: the **park** path (3 failed

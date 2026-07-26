@@ -78,7 +78,9 @@ and is fixed first; a repo with no suite at all makes the missing suite finding 
 After three failed attempts a finding is **parked** with a written ruling naming which
 gap blocked it — context, capability, authority, proof, or feedback — and what would
 unpark it. Nothing is silently dropped, and no run is reported finished with work
-quietly removed from the queue.
+quietly removed from the queue. The triage for a run another session left mid-finding
+lives in `playbooks/resume.md`, read only when the ledger shows one — the common path
+never loads it.
 
 **`verify.md` — the evidence gate.** Nothing passes on memory, summaries, or a
 subagent's report. Run the commands fresh, read every hunk of the diff, then write one
@@ -201,7 +203,7 @@ from, and neither exists until you build it.
 ```
 AGENTS.md                 # the front door: routes by decision to one playbook
 CLAUDE.md                 # thin shim: @AGENTS.md plus Claude-specific deltas
-playbooks/                # seed, audit, improve, verify, self-test
+playbooks/                # seed, audit, improve (+ resume), verify, self-test
 principles/               # DRY, KISS, SOLID, YAGNI, fail-fast — full-form rubrics
 lenses/                   # conditional rubrics, each with a Gate section
 templates/agents-dir/     # the .agents/ skeleton seed.md instantiates
