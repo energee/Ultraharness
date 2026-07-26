@@ -210,6 +210,7 @@ templates/agents-dir/     # the .agents/ skeleton seed.md instantiates
 scripts/audit-checks.sh   # deterministic fact collector (git + grep + awk only)
 scripts/test.sh           # bash tests for the fact collector
 docs/ablations.md         # which instruction rules have been tested, and how
+docs/coverage.md          # hard-path rotation record + playbook prose budget
 ```
 
 ## Testing the harness itself
@@ -230,6 +231,9 @@ needed is decoration. `docs/ablations.md` records each test and its verdict, and
 runs decline its excuse. The first class removal (rows restating a numbered step)
 happened on exactly that evidence.
 
-`self-test.md`'s "Not covered" section names what has no fixture yet — the resume path,
-the park path, the testless verify route, and the authority envelope. A green
+The dangerous paths — park and the parked-baseline hard stop, the testless verify
+route, the authority envelope, the mid-pass resume — run one per self-test on a
+rotation, against manufactured ledger state, with `docs/coverage.md` as the record of
+which have actually run. The same file tracks a per-run prose budget of the
+playbooks' line counts, so growth has to be justified rather than discovered. A green
 self-test is evidence about what it ran, and nothing else.

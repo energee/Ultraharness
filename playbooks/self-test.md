@@ -20,7 +20,8 @@ what is missing.
 2. `git`, `bash`, and a writable temp dir are available.
 3. The fixture goes in a temp dir **outside** `<harness>` — never inside it, and
    never in a real repo of the user's. Nothing this playbook does may write to
-   `<harness>` except a fix you deliberately make in step 7.
+   `<harness>` except a fix you deliberately make in step 7 and the records steps 1,
+   5c, and 5f append (`docs/coverage.md`, `docs/ablations.md`).
 
 ## Workflow
 
@@ -29,6 +30,12 @@ what is missing.
 Run `bash scripts/test.sh` from `<harness>`. Every assertion must print `PASS` and
 the run must exit 0. A single `FAIL` stops the self-test here: fix the script or the
 test, then start over from this step.
+
+Then record the prose budget: run `wc -l <harness>/playbooks/*.md` and append one
+line to the budget table in `<harness>/docs/coverage.md`. If any count grew since
+the previous line, name the cause in your report — a budget nobody reads is not a
+budget, and growth with no named cause is a finding against whatever run added the
+lines.
 
 ### 2. Build the fixture repo
 
@@ -335,6 +342,50 @@ worktree left dirty, then hand off. That exercises `playbooks/resume.md`'s three
 worktree states,
 which nothing else here covers.
 
+### 5f. Cover one hard path
+
+Steps 3-5e exercise the paths a healthy run takes. The paths below are where an
+unattended run does damage, and covering all of them every run would double the
+self-test — so run exactly **one** per self-test: read the rotation record in
+`<harness>/docs/coverage.md`, take the oldest-untested, run its recipe, and append
+the result there.
+
+Manufactured state is legitimate here, and it is what makes these cheap: the ledger
+is the loop's only memory, so a ledger written to encode "two attempts already
+failed" enters the third-attempt path as surely as failing twice for real — and
+deterministically.
+
+- **park-and-hard-stop** — build a fixture whose suite fails on a pure contradiction,
+  e.g. `const x = f(1); if (!(x === 1 && x === 2)) { throw new Error("impossible") }`
+  — no change to `f` can go green, and verify.md forbids touching the test. Seed it,
+  then run improve. Assert: the red baseline became finding #1; after 3 attempts the
+  entry reads `parked(<gap>)` with a ruling naming gap, evidence, and unpark
+  condition; the last attempt is committed with a first line beginning
+  `parked(red-baseline): ` and the ruling records that commit's SHA; the worktree is
+  left in place; the run stopped at the hard stop rather than moving on; the ledger
+  is committed. Then run improve **again** and assert it stops immediately, reporting
+  the existing ruling — no second baseline entry, no fresh 0/3 budget.
+- **testless-verify** — seed a fixture with no test suite (the record reads `none
+  verified`), make one small scripted change, and run verify.md on it. Assert the
+  verdict is exactly `PASS (unverified-by-tests)`; the evidence block quotes the
+  record's `none` plus the check that the diff adds no test files; and no invented
+  smoke run appears as evidence.
+- **authority-envelope** — seed a fixture, then append one manufactured `open` ledger
+  entry whose smallest fix is a dependency change (e.g. a pinned dependency the
+  finding says to upgrade). Run improve with the envelope at 1 finding. Assert the
+  entry ends `parked(authority)` at `attempts: 0/3` with a ruling naming the grant
+  that would unpark it, no dependency file was touched, and the parked ruling was
+  committed on the base branch.
+- **mid-pass-resume** — step 5e's harder variant, as written there: kill a pass with
+  a dirty worktree, hand off with the fixed line, and assert the fresh context takes
+  `playbooks/resume.md`'s first triage state (non-empty worktree status → continue
+  from fix or verify), does not re-cut the worktree, and lands the finding exactly
+  once.
+
+A failed assertion here is a defect in a harness file, exactly as in step 7 — fix the
+smallest thing that explains it and re-run the path. Delete these fixtures with the
+rest (step 6).
+
 ### 6. Delete the fixture
 
 Remove every temp dir this run created — `<fixture>`, `<fixture2>`, and `<fixture3>`.
@@ -362,23 +413,19 @@ in `audit-checks.sh`.
 
 ## Not covered
 
-This playbook exercises `seed.md` and `audit.md` end to end, and **one** pass of
-`improve.md`/`verify.md` (step 5b), against real fixtures.
+This playbook exercises `seed.md` and `audit.md` end to end, **one** pass of
+`improve.md`/`verify.md` (step 5b), and the clean handoff (step 5e), against real
+fixtures. The hard paths — park and the parked-baseline hard stop, the testless
+verify route, the authority envelope, the mid-pass resume — are covered one per run
+by step 5f's rotation: `<harness>/docs/coverage.md` is the record of which have
+actually run and when, and a path with no row there is unproven, whatever this
+section says.
 
-Step 5e covers the clean handoff between passes; its optional mid-pass variant is the
-only coverage of `playbooks/resume.md`'s three worktree states, and it is optional, so treat the
-**resume** path as covered only if you ran it.
+Still uncovered by anything: runs longer than two passes. A green self-test says a
+single pass works end to end; it says nothing about the loop across passes.
 
-Still uncovered, and so not evidence about anything: the **park** path (3 failed
-attempts, gap ruling, parked-baseline hard stop), the **testless** route through
-PASS (unverified-by-tests), the **authority envelope** (no fixture here tempts a run
-past it), and any run longer than two passes. A green self-test says a single pass works
-end to end; it says nothing about the loop across passes.
-
-Step 5c tests exactly **one** anti-rationalization row per run, and only when a fresh
-context is available. Every untested row is an unfalsified claim — the tables are the
-least-evidenced prose in this repo, and one row per run is a slow burn-down, not
-coverage.
+Step 5c tests exactly **one** remaining anti-rationalization row per run, and only
+when a fresh context is available. Every untested row is an unfalsified claim.
 
 ## Stop conditions
 
