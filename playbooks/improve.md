@@ -227,7 +227,9 @@ diff line by line and simplify. If de-sloppifying changed anything, run verify a
 
 Commit the fix on the finding's branch first — an uncommitted worktree has nothing to
 merge — with a first line beginning exactly `fix(<finding-slug>): ` and no
-Co-Authored-By line. That form is not decoration: step 1's resume path matches it, with
+Co-Authored-By line. Read step 8's docs bullet **before** making that commit: the
+`conventions.md` corrections it asks for belong in *this* commit, and by the time you
+reach step 8 this branch is merged and gone. That form is not decoration: step 1's resume path matches it, with
 the closing `):`, to tell this pass's commit from an earlier pass's. A message without
 it leaves a resumed run unable to tell a committed fix from an untouched branch, and a
 looser form lets a sibling slug that extends this one match instead. On a resume that
@@ -280,10 +282,17 @@ this pass wrote is left dirtying the target.
   into the target. Nothing missing, nothing written.
 - If the fix changed code that `<target>/.agents/conventions.md` cites, or made one of
   its claims false, correct that claim **in the fix commit** — docs travel with the
-  change — and advance the file's `recorded-at` to the commit you just verified
-  against. Same for `AGENTS.md`'s `Verified at` whenever you re-ran a recorded command.
+  change — which means doing it back at step 7, before that commit closes.
+  The stamp cannot travel with it: a file cannot contain its own commit SHA. So advance
+  `recorded-at` here, in this checkpoint commit, naming the **merged fix commit's** SHA
+  — and `AGENTS.md`'s `Verified at` likewise whenever you re-ran a recorded command.
+  Two commits, deliberately: the corrected claim rides with the change, the stamp names
+  what it was verified against. Splitting them is not sloppiness to apologise for; one
+  commit holding both is impossible.
   Advancing a stamp without re-checking the claims under it is the one thing the stamp
-  must never do: it launders old prose as freshly verified.
+  must never do: it launders old prose as freshly verified. Re-check **every** claim in
+  the file, not just the one you set out to change: a fix that shifts lines in a cited
+  file voids that file's other citations too, and those are the ones nobody looks at.
 - Make a checkpoint commit in the target covering everything this pass still has
   uncommitted: the ledger update, and any `AGENTS.md`, `conventions.md`, or
   `learnings.md` edit above.

@@ -41,5 +41,8 @@ two instances is plausible (see below) — extract only what is provably identic
   top-to-bottom without jumping to a shared fixture is often the right call — don't DRY
   away test clarity.
 - Duplication of under 3-4 lines, or duplication that appears only twice with no sign of a
-  third occurrence, is usually cheaper to leave than to abstract.
+  third occurrence, is usually cheaper to leave than to abstract — unless the copies are
+  near-identical and encode one rule the sites must agree on (a money-rounding policy, a
+  validation threshold), where silent divergence is the defect and two copies already
+  justify one home.
 

@@ -120,13 +120,15 @@ deliberately no handoff summary: a summary is written by the most depleted conte
 the run, from memory, while the ledger was written by a fresh one at each step. If that
 one line is not enough, the ledger is what gets fixed.
 
-**The record is checked, not trusted.** `conventions.md` and the commands block carry a
-`recorded-at` stamp — the commit they were observed at. Every claim cites a file, and
-nothing derivable from the code is recorded at all: a doc that restates the code is
-duplicated knowledge, and duplicated knowledge diverges. The audit re-checks each claim
-against the code it cites and reports drift as a `staleness` finding, so a seeded file
-that has quietly started lying gets ranked alongside everything else instead of being
-believed.
+**The record is checked, not trusted.** `conventions.md`, and both the commands block and
+the repo summary of `AGENTS.md`, carry a `recorded-at` stamp — the commit they were
+observed at. Every claim cites a file, and nothing derivable from the code is recorded at
+all: a doc that restates the code is duplicated knowledge, and duplicated knowledge
+diverges. The audit re-checks each claim against the code it cites and reports drift as a
+`staleness` finding, so a seeded file that has quietly started lying gets ranked
+alongside everything else instead of being believed. Citations are also opened as they are
+written, because the stamp catches only what *moved*: a claim that was false the day it
+was recorded would otherwise survive every drift check, forever.
 
 ## Rubrics and lenses
 

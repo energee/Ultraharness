@@ -22,6 +22,11 @@ block, updated in place — not appended per run.
 - ruling: <parked entries only — which gap, what evidence, what would unpark it>
 ```
 
+`file:line` records where the finding was **seen at audit time**, not where it lives when
+someone works it. Earlier passes in the same run move code, so re-locate the finding
+before fixing it: a citation that no longer resolves means the entry is a stale pointer,
+never that the finding's scope is empty.
+
 ## Run stop format
 
 Written by any playbook that stops a run early. This is a run record, not a finding:

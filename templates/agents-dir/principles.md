@@ -21,6 +21,14 @@ A **guard** is code whose job is to survive something going wrong: input validat
 sanitization, an authorization check, an error branch that changes control flow on
 failure, a timeout, a bound, a cleanup path, a transaction wrapper, a version pin.
 
+An error branch that *discards* the failure is not one of them. An empty or comment-only
+catch changes no control flow — it resumes with a wrong value — so deleting it is the
+fail-fast rubric's highest-yield finding, not a guard removal: not a FAIL under
+`playbooks/verify.md` step 4, and never `parked(authority)`. Removing the branch that
+*handles* a failure is a guard removal; removing the one that *hides* it is the fix.
+Without this distinction the two sections collide, and the single most valuable
+fail-fast fix would park every time.
+
 Where a rubric below — or a lens in `lenses/` — would flag a guard *for removal*, it
 stays silent. "It has one
 caller", "it has no caller", "it adds a branch or nesting", and "it is a
@@ -51,7 +59,9 @@ Do NOT apply when:
 - The duplication is incidental — alike today, but encoding unrelated rules that will
   diverge; merging couples things that should change independently.
 - Repeated inline test setup keeps each test readable top-to-bottom.
-- It's under 3-4 lines, or appears only twice with no sign of a third occurrence.
+- It's under 3-4 lines, or appears only twice with no sign of a third occurrence —
+  unless the copies are near-identical and encode one rule the sites must agree on, in
+  which case silent divergence is the defect and two copies already justify one home.
 
 ## KISS — simplest solution that meets the real requirement
 

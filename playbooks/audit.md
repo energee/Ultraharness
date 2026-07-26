@@ -99,9 +99,13 @@ unchecked: whether what the record claims is still true. A seeded file nobody
 re-examines becomes a confident lie that every later session trusts, so this step is
 the one narrow exception, and it judges only the record's accuracy.
 
-Read `<target>/.agents/conventions.md` and the commands block of
-`<target>/.agents/AGENTS.md`. Both carry a stamp — `recorded-at`, `Verified at` — of
-the commit they were written against. Then:
+Read `<target>/.agents/conventions.md` and `<target>/.agents/AGENTS.md` — the latter's
+commands block *and* its repo summary, which carries citable claims of its own (file
+names, counts, what each module is for) under the same stamp, and rots the same way. A
+summary naming a file that has since been renamed is as void as a dead line citation;
+scoping this step to the commands block is exactly how such a claim survives a re-seed
+that stamped the file as freshly verified. Both files carry a stamp — `recorded-at`,
+`Verified at` — of the commit they were written against. Then:
 
 - Run `git -C <target> diff <stamp>..HEAD --stat -- <the paths those claims cite>`.
   Nothing moved under a claim's citations → the claim stands; say so and move on.
