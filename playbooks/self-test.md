@@ -66,10 +66,17 @@ verifying the test command by running it. Then assert the exact footprint:
 - `<fixture>/.agents/` contains exactly the five files `AGENTS.md`,
   `conventions.md`, `principles.md`, `ledger.md`, `learnings.md` — and, because this
   fixture fires no lens gate (step 2 built it that way), **no `lenses/` directory**.
-- The no-fire fixture pays nothing for the lens machinery:
-  `grep -ril lens <fixture>/.agents/` returns nothing, and `<fixture>/.agents/AGENTS.md`
-  has no `## Lenses` section. Zero added lines in the common case is this design's own
-  claim; this is where it is checked.
+- The no-fire fixture pays nothing for the lens machinery: no `<fixture>/.agents/lenses/`
+  directory, no `## Lenses` section in `<fixture>/.agents/AGENTS.md`, and no lens *file*
+  content anywhere under `.agents/` — `grep -rl 'Gate — does this lens apply' <fixture>/.agents/`
+  returns nothing. Zero added lines in the common case is this design's own claim; this
+  is where it is checked.
+
+  Not `grep -ril lens`. That was the assertion here until a run showed it cannot pass:
+  `principles.md` is copied byte-identical whether or not a gate fired, so its guard
+  precedence section says "governs every rubric and lens" in both cases, and it has to —
+  the same bytes must be correct for a repo that does have a lens. An assertion no
+  correct implementation can satisfy is a defect in the assertion.
 - No placeholders survive: searching `<fixture>/.agents/` for `{{` returns nothing.
 - Both stamps landed and resolve: `conventions.md`'s `recorded-at` and `AGENTS.md`'s
   `Verified at` each name a commit `git -C <fixture> cat-file -e <stamp>^{commit}`
@@ -122,7 +129,10 @@ Read `playbooks/audit.md` and run it against `<fixture>`, as written. Assert:
   `[<principle>/<severity>] <file:line> — <what> — <smallest fix>`, and the list is
   ranked with nothing suppressed.
 - `<fixture>/.agents/ledger.md` gained one `open` entry per finding, in the ledger's
-  entry format, plus the top-3 slugs.
+  entry format, plus the top-3 slugs. Count only what is **below the template's `---`
+  separator**: `ledger.md` documents its own entry format using the same syntax it
+  stores entries in, so a naive `grep -c '^- finding: \['` over the whole file counts
+  the documentation as a fifth finding and every count assertion reads one high.
 - No finding covers the harness's own footprint — `.agents/` and the pointer blocks
   are quoted in the script report but never judged.
 

@@ -111,6 +111,14 @@ Write one of three verdicts — **PASS**, **PASS (unverified-by-tests)**, or **F
 command outputs (at minimum the final summary lines of each run: counts, exit
 status, failure names). A verdict with no quoted output is invalid; redo the runs.
 
+On the **PASS (unverified-by-tests)** route there may be no recorded command at all —
+no test, no build, no typecheck — and then there is nothing to redo. Quote the evidence
+of absence instead: the record's `none`, and the check that it is not stale (the diff
+introduces no test files). That is the honest output for that verdict. Do **not** invent
+a run to fill the gap — a smoke command you wrote yourself is not the repo's suite, and
+a verdict that quotes one reads as coverage that does not exist. If you ran something ad
+hoc to satisfy your own curiosity, it does not belong in the evidence block.
+
 - **PASS** requires: every recorded command ran fresh and succeeded, the full diff
   was read, and step 4 raised nothing.
 - **PASS (unverified-by-tests)** requires: `.agents/AGENTS.md` records `none` or
