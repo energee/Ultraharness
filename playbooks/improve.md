@@ -417,18 +417,6 @@ failed run — retry before concluding anything about capability.
 
 ## Anti-rationalization table
 
-| Excuse | Rebuttal |
-| --- | --- |
-| "The baseline is only a little red." | The gate holds. Red baseline = finding #1, fixed first. Nothing else starts before it. |
-| "The suite is still red, so I'll open a fresh red-baseline finding." | One per target, ever. A parked `red-baseline` is the hard stop, not a new entry with a new 0/3 budget. |
-| "Nothing references this validator, so it is dead code." | Framework-dispatched guards never have in-tree callers. Removal at a boundary needs the boundary gone, not the symbol uncalled. |
-| "This column is obviously dead, and a human can always revert it." | They cannot — dropped rows do not come back. Irreversible fixes park for a human; that is step 2's third standing rule. |
-| "I'll batch five findings in one worktree." | One finding, one worktree, one verify. Batching makes failures unattributable and reverts impossible. |
-| "De-sloppify is overhead on a small diff." | It runs. On a small diff it's cheap; on any diff it's where the slop hides. |
-| "I'm close — one more attempt past 3 will crack it." | Park it with a gap ruling. The 4th attempt is what the next run, with fresh context, is for. |
-| "The envelope tripped but the queue is almost empty." | Stop cleanly, report scope remaining. "Almost empty" is exactly what the next run's ledger is for. |
-| "This in-progress entry is stale, I'll just start fresh." | Resume it. The ledger surviving session death is the point — inspect its worktree before deciding anything. |
-| "The recorded base branch isn't checked out — I'll just check it out and carry on." | Stop and report both. This playbook never switches the target's checkout; something moved it, and guessing which branch is right is how a fix lands on the wrong one. |
-| "The fix is done and green — I'll push it so the user has it." | Outside the authority envelope. Local merge is yours; anything that leaves the machine is the user's call, named in the report and left undone. |
-| "Nothing to say for 'what I read' — I just fixed the thing." | Then write `none applied`. That is the answer that tells the user a seeded file is dead weight; silence tells them nothing. |
-| "The branch reports merged, so the fix is done." | Merges here normally fast-forward, so "merged" — and base-tip identity — is also what a branch that committed nothing looks like. Worktree status and the tip message come first; only then does reachability decide landed vs unmerged. Skipping that last check strands a finding on its branch. |
+Every row this playbook carried restated a numbered step, and the restatement class
+was removed 2026-07-26 on ablation evidence — see `<harness>/docs/ablations.md`. A
+row goes in only when a real run makes an excuse no numbered step already forbids.

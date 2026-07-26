@@ -224,12 +224,16 @@ Assert the negative too, the way step 5a does: the run stopped after one finding
 because the envelope said 1, reported scope remaining, and left the still-`open`
 entries open. An envelope that never stops a run is not an envelope.
 
-### 5c. Ablate one anti-rationalization table
+### 5c. Ablate one anti-rationalization row
 
-Every playbook ends in a table of excuses and rebuttals. Each row claims an agent
-would otherwise make that excuse — and an unfalsified claim is decoration. This step
-tests one row per self-test run, so the tables shrink toward what is load-bearing
-instead of growing forever.
+The playbooks' anti-rationalization tables hold only rows whose action the workflow
+body does not already mandate. The 2026-07-26 class removal (recorded in
+`<harness>/docs/ablations.md`) deleted every restating row: three independent fresh
+contexts, each given a playbook with a restatement row removed, declined the excuse
+anyway and cited the body — never the table. Each row still claims an agent would
+otherwise make its excuse, and an unfalsified claim is decoration: this step tests
+one remaining row per run. A row — or a class of rows sharing the property that
+failed — comes out after two independent runs decline its excuse.
 
 The run must be done by a **fresh context** — a subagent, a second session, an agent
 that has not read this playbook. You cannot ablate a table you have already read: you
@@ -245,9 +249,7 @@ row catches your eye. Then:
 1. Copy the playbook to a scratch file with **that one row removed**, everything else
    intact.
 2. Give the fresh context the modified playbook and a fixture built so the excuse is
-   tempting: for "I'll batch five findings in one worktree", a queue with five cheap
-   related findings; for "no test suite here, so I'll just write PASS", a testless
-   repo with a clean diff.
+   tempting — cheap to make, costly to decline.
 3. Record what it actually did, verbatim — not whether it "seemed to understand".
 
 Then judge:
@@ -265,11 +267,10 @@ Then judge:
 
 Append the result as one row in `<harness>/docs/ablations.md`, and report it. It does
 not go into the target, and it does not go into the playbook — except the row edit
-itself, once two runs justify one.
-
-Note what the run tells you about *where* the constraint lives. If the fresh context
-complied because the workflow body already states the rule, the row is a restatement,
-and restatements are the first thing to cut when a table gets long.
+itself, once two runs justify one. New rows enter the same way removals leave:
+by observation. A row goes in when a real run actually made its excuse — never
+speculatively, and never when a numbered step already mandates the action, which is
+the refuted restatement class.
 
 ### 5d. Make the record lie, and check the audit notices
 
@@ -398,13 +399,6 @@ coverage.
 
 ## Anti-rationalization table
 
-| Excuse | Rebuttal |
-| --- | --- |
-| "I read seed.md carefully and it clearly works." | Reading is not running. The assertions are about files that exist after a run; no run, no result. |
-| "I'll simulate the seed instead of really creating a fixture." | A simulated run tests your imagination, not the harness. Real dir, real git, real commands. |
-| "The fixture is trivial, the audit finding it nothing is fine." | You planted the duplication precisely so there is a known answer. Missing it is a failed self-test. |
-| "I'll fix the fixture so the assertion passes." | The fixture is the ruler. Bending the ruler to fit the harness is falsifying the test — fix the harness. |
-| "This playbook edit reads better, I'll keep it even though nothing failed." | Every fix traces to an observation from this run. No observation, no edit. |
-| "I'll leave the temp dir; deleting it is cleanup nobody sees." | The next self-test would start pre-seeded and quietly skip the seed path. Delete both of them. |
-| "I've read the table, but I'll run the ablation myself anyway — I'll be objective." | You cannot unread it. Your compliance measures your memory, not the prose. Fresh context or skip the step and say so. |
-| "Step 5a's second fixture is a lot of setup — the first one proves gating well enough." | The first proves nothing was copied. Only a fixture where one lens fires and another does not proves the gate discriminates rather than always declining. |
+Every row this playbook carried restated a numbered step, and the restatement class
+was removed 2026-07-26 on ablation evidence — see `<harness>/docs/ablations.md`. A
+row goes in only when a real run makes an excuse no numbered step already forbids.

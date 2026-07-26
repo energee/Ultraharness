@@ -40,8 +40,10 @@ repo must not be written to, and it runs read-only.
 ## The five playbooks
 
 Each opens with a readiness probe (what must be true before starting), then a
-workflow, explicit stop conditions, and a table of the excuses agents use to skip the
-work.
+workflow and explicit stop conditions. Anti-rationalization rows exist only where the
+workflow body does not already mandate the action — ablation testing showed rows that
+restate a numbered step are decoration, and they were removed (`docs/ablations.md`
+holds the evidence).
 
 **`seed.md` — teach the repo to teach the agent.** Reads your code, records what it
 observes, and writes `.agents/`. Every convention it records needs two corroborating
@@ -222,7 +224,9 @@ enough to resume from — all against throwaway fixtures, then deletes them.
 It also ablates one anti-rationalization row per run: remove the row, hand the modified
 playbook to a fresh context, and see whether the excuse shows up. A rule no agent ever
 needed is decoration. `docs/ablations.md` records each test and its verdict, and a row
-comes out only after two runs decline its excuse.
+— or a whole class of rows sharing the property that failed — comes out only after two
+runs decline its excuse. The first class removal (rows restating a numbered step)
+happened on exactly that evidence.
 
 `self-test.md`'s "Not covered" section names what has no fixture yet — the resume path,
 the park path, the testless verify route, and the authority envelope. A green

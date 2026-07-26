@@ -295,13 +295,6 @@ touch a file just to have something to commit.
 
 ## Anti-rationalization table
 
-| Excuse | Rebuttal |
-| --- | --- |
-| "I can skip running the test command — the README says what it is" | READMEs go stale. Only commands you ran in this session go into `AGENTS.md`; everything else is `none verified`. |
-| "I'll write this convention from the one example I saw" | One example is an anecdote. Two-plus corroborating examples, each with a cited file, or write `nothing observed yet`. |
-| "The existing AGENTS.md is bad — I'll just rewrite it" | Not yours to rewrite. Existing files get the delimited `<!-- harness:begin -->` block appended (or replaced in place); every other line stays untouched. |
-| "`.agents/` already exists, so re-seeding means re-copying the templates over it" | Re-seeding refreshes only stale lines. User-added content, ledger entries, and learnings are never touched. |
-| "audit-checks.sh already told me the commands, no need to run them" | Its own output says `discovered, NOT run`. Discovery finds candidates; only execution verifies. |
-| "This repo will probably grow a queue eventually — I'll copy the idempotency lens now" | Gates read the repo as it is. A lens copied on speculation taxes the target forever for a thing it does not have; the re-seed adds it the day the queue lands. |
-| "It's a UI repo, obviously the atomic lens applies — no need to run the greps" | Run the gate and record its output. A gate decided by impression is not observable evidence, and the next session cannot check your reasoning. |
-| "The gate no longer fires, so I'll delete the lens it put there last time" | Removal is the user's call. Leave it in place and note it in the report — an agent silently dropping a rubric the user has been auditing against is a surprise, not an update. |
+Every row this playbook carried restated a numbered step, and the restatement class
+was removed 2026-07-26 on ablation evidence — see `<harness>/docs/ablations.md`. A
+row goes in only when a real run makes an excuse no numbered step already forbids.
