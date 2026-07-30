@@ -14,7 +14,7 @@ set -euo pipefail
 # comparing output byte for byte.
 export LC_ALL=C
 
-SCRIPT_VERSION="v2 (2026-07-25)"
+SCRIPT_VERSION="v3 (2026-07-29)"
 
 TARGET="${1:-}"
 if [ -z "$TARGET" ] || [ ! -d "$TARGET" ]; then
@@ -148,10 +148,15 @@ echo "size: $FILE_COUNT files, $TOTAL_LOC lines (excluding lockfiles/vendored di
 # largest files: top 10 by line count
 # ---------------------------------------------------------------------------
 echo "largest files: top 10 by line count"
+LARGEST_LOC=0
 if [ "$FILE_COUNT" -gt 0 ]; then
+  # Sorted per-file counts, kept for reuse: the top-10 print here, the top-20
+  # duplication scan, and the gauges line all read the same list.
   (cd "$TARGET" && tr '\n' '\0' < "$CODE_FILES" \
-    | xargs -0 wc -l 2>/dev/null | grep -v ' total$' | sort -k1,1rn -k2 | head -10 \
-    | awk '{ lines=$1; $1=""; sub(/^ /,""); printf "  %s lines  %s\n", lines, $0 }') || true
+    | xargs -0 wc -l 2>/dev/null | grep -v ' total$' | sort -k1,1rn -k2) > "$TMP/wc-sorted" || true
+  head -10 "$TMP/wc-sorted" \
+    | awk '{ lines=$1; $1=""; sub(/^ /,""); printf "  %s lines  %s\n", lines, $0 }' || true
+  LARGEST_LOC="$(head -1 "$TMP/wc-sorted" | awk '{ print $1 + 0 }')"
 else
   echo "  (no files inventoried)"
 fi
@@ -200,9 +205,7 @@ done < "$TMP/dup-names"
 
 # (b) normalized-line overlap among the 20 largest files (bounded pairwise scan)
 if [ "$FILE_COUNT" -gt 1 ]; then
-  (cd "$TARGET" && tr '\n' '\0' < "$CODE_FILES" \
-    | xargs -0 wc -l 2>/dev/null | grep -v ' total$' | sort -k1,1rn -k2 | head -20 \
-    | awk '{ $1=""; sub(/^ /,""); print }') > "$TMP/top-files" || true
+  head -20 "$TMP/wc-sorted" | awk '{ $1=""; sub(/^ /,""); print }' > "$TMP/top-files" || true
   i=0
   while IFS= read -r f; do
     i=$((i + 1))
@@ -239,6 +242,17 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# gauges: the same facts the sections above print, restated as one
+# machine-comparable line in a fixed field order. An improve run records this
+# line at its first audit and its last, so a trend across runs is a diff of two
+# lines rather than a memory. Fields are only ever appended — renaming or
+# reordering one breaks every recorded comparison.
+# ---------------------------------------------------------------------------
+DUP_COUNT="$(wc -l < "$DUP_OUT" | tr -d ' ')"
+TEST_FILE_COUNT="$(grep -Ec '(^|/)(tests?|__tests__|spec)(/|$)|\.(test|spec)\.[^/]+$|_test\.[^/]+$|(^|/)test_[^/]+$' "$CODE_FILES" || true)"
+echo "gauges: files=$FILE_COUNT loc=$TOTAL_LOC largest=$LARGEST_LOC todos=$TODO_COUNT dup-candidates=$DUP_COUNT test-files=$TEST_FILE_COUNT"
+
+# ---------------------------------------------------------------------------
 # teachability: can a newcomer (or agent) find their way in?
 # ---------------------------------------------------------------------------
 README_STATE=missing
@@ -263,8 +277,11 @@ echo "agents dir: .agents/ $AGENTS_STATE; ledger $LEDGER_STATE"
 # lens, alphabetical, printed every run: "not-fired" is a fact, and a withheld
 # lens must be distinguishable from a section that never ran.
 #
-# ponytail: two lenses, two hardcoded gates. If a third arrives, read the patterns
-# out of the lens files instead of growing a third branch here.
+# ponytail: four lenses, four hardcoded gates, ~8 lines each. An earlier note here
+# said a third lens should read its patterns out of the lens files; that was wrong
+# and is withdrawn: both lens docs promise "the patterns live in the script", and a
+# markdown-parsed pattern line would move gating into prose, where a typo silently
+# re-gates every repo. A fifth lens copies one of the shapes below.
 # ---------------------------------------------------------------------------
 
 # Gates judge the target's own *code*. CODE_FILES has already dropped the harness
@@ -293,6 +310,13 @@ gate_report() {
   fi
 }
 
+# a11y: authored UI markup, by extension — component files plus common server
+# templates. Generated/vendored output is already dropped from the inventory.
+A11Y_HITS="$TMP/gate-a11y"
+grep -Ei '\.(html|jsx|tsx|vue|svelte|erb|twig|haml)$|\.blade\.php$' "$GATE_FILES" > "$A11Y_HITS" || true
+sort -u "$A11Y_HITS" -o "$A11Y_HITS"
+gate_report a11y "$A11Y_HITS"
+
 # atomic: component-UI file extensions, or a components dir *and* a framework
 # import. Either half of the second condition alone is not enough.
 ATOMIC_HITS="$TMP/gate-atomic"
@@ -318,5 +342,17 @@ fi
 grep -Ei '(^|/)(migrations?|migrate|deploy|infra|terraform)(/|$)|\.sql$' "$GATE_FILES" >> "$IDEM_HITS" || true
 sort -u "$IDEM_HITS" -o "$IDEM_HITS"
 gate_report idempotency "$IDEM_HITS"
+
+# security: route-registration / HTTP-handler vocabulary in file contents, or
+# route/controller/middleware paths.
+SEC_HITS="$TMP/gate-security"
+: > "$SEC_HITS"
+if [ -s "$GATE_FILES" ]; then
+  (cd "$TARGET" && tr '\n' '\0' < "$GATE_FILES" \
+    | xargs -0 grep -lIEi '(app|router)\.(get|post|put|patch|delete)\(|@(app|bp)\.route|urlpatterns|http\.handlefunc|@(get|post|put|delete|patch|request)mapping|createserver\(|express\(\)|fastify\(' 2>/dev/null) >> "$SEC_HITS" || true
+fi
+grep -Ei '(^|/)(routes?|controllers?|middleware)(/|$)' "$GATE_FILES" >> "$SEC_HITS" || true
+sort -u "$SEC_HITS" -o "$SEC_HITS"
+gate_report security "$SEC_HITS"
 
 exit 0
