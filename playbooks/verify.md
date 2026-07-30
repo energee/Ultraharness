@@ -164,14 +164,6 @@ its own evidence — not something to slip into a verification pass.
 
 ## Anti-rationalization table
 
-| Excuse | Rebuttal |
-| --- | --- |
-| "The diff is tiny — no need to run the whole suite" | Tiny diffs break distant tests all the time; size of diff is not size of blast radius. Run the full suite. |
-| "Tests were green two edits ago" | Two edits ago is a different codebase. Only output from a run after the final edit counts. |
-| "The subagent said it passed" | A subagent's report is a claim, not evidence. Re-run the commands and read the diff yourself. |
-| "I wrote it, so I already know what the diff says" | You know what you meant. The gate is about what the hunks contain. Hand it to a fresh context if you have one, and say in the verdict if you don't. |
-| "I'll skim the diff summary instead of the hunks" | Summaries hide the one hunk that matters. Read every hunk or the verdict is invalid. |
-| "No test suite here, so I'll just write PASS" | Write PASS (unverified-by-tests). A bare PASS claims evidence you do not have. |
-| "AGENTS.md records `none`, so there is nothing to run" | Check the diff first. If this change adds tests, the record is stale and this change is what made it stale — run the new suite and give a real verdict. |
-| "This test is flaky/wrong, I'll just relax it so we pass" | On FAIL the fix iterates, never the test. A wrong test is its own finding, raised separately with evidence. |
-| "The fix deletes an unused guard — that is just cleanup" | Check the diff against guard precedence. Unused is not the test; boundary-gone is. If the boundary stands, that is a FAIL. |
+Every row this playbook carried restated a numbered step, and the restatement class
+was removed 2026-07-26 on ablation evidence — see `<harness>/docs/ablations.md`. A
+row goes in only when a real run makes an excuse no numbered step already forbids.

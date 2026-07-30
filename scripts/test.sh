@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# test.sh — bash test harness for scripts/audit-checks.sh.
+# test.sh — bash test harness for scripts/audit-checks.sh, plus the rubric sync
+# tripwire pinning full-form rubrics to their condensed twins.
 # Builds a throwaway fixture repo in a temp dir, runs audit-checks.sh against it,
 # and asserts on the printed facts with grep. Prints PASS/FAIL per assertion and
 # exits nonzero if any assertion fails. No dependencies beyond git + coreutils.
@@ -25,6 +26,40 @@ assert_not_grep() {
     pass "$1"
   fi
 }
+
+# --- rubric sync tripwire ---
+# The full-form rubrics (principles/, lenses/) and their condensed twins
+# (templates/agents-dir/) are deliberate duplication — README says why — which
+# leaves them free to drift apart silently. Each hash below pins one file at its
+# last deliberate sync. Editing any of them fails here until the hash is updated:
+# re-read the twin, re-sync it if the change affects it, then paste the new hash
+# the failure message prints. That converts silent drift into a red test at the
+# moment of the edit — the same trick recorded-at plays on targets, pointed inward.
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+check_sync() {
+  # check_sync <repo-relative file> <sha256 at last sync>
+  local actual
+  actual="$(shasum -a 256 "$REPO_ROOT/$1" | awk '{print $1}')"
+  if [ "$actual" = "$2" ]; then
+    pass "rubric sync: $1 unchanged since last sync"
+  else
+    fail "rubric sync: $1 changed — re-sync its twin if needed, then record $actual"
+  fi
+}
+check_sync principles/dry.md        e1cc30fc1b1fd14e7160d235b096a7e363b367a1bd5172e45b6986a9448016d8
+check_sync principles/kiss.md       81d07de626fea0b0acd751c4f0e4c53ddfe4c7ddc249a4bb15179a321b4865cf
+check_sync principles/solid.md      1c29917458db8535e91a311aed23d99b9871a56c875384611741c8b387ecce71
+check_sync principles/yagni.md      c724c113841a6cf80ee892eb8cc9df6986ba267fbcbf9fdb55b434f7814d77f9
+check_sync principles/fail-fast.md  38b1e68fa1d765accf3de14ce531b0ea738be8fd8dcf31aa81ae1381feb2770b
+check_sync lenses/a11y.md           8488cde111a0bb622369b32eb7f2b2effd47e30e6a6e4a259959c4f5bcf72091
+check_sync lenses/atomic-design.md  033a38bfb0b266577cf2cf30fc33b2c13a283f1c25ece79ce135d6c5e6f8451f
+check_sync lenses/idempotency.md    f6cc63250e4ab2e5c9fb9d21ae4e1a9bc1c1800b4697c5df13d9022c80223948
+check_sync lenses/security-boundary.md  b978e51f5166f1ff0aff924c1f29112d7144ec992f2cb0842832b4f0cce7ae37
+check_sync templates/agents-dir/principles.md            e5777b57c21c05d0aa55a62c16a1f4f4a7fb6160c7672e0956325e54102980d8
+check_sync templates/agents-dir/lenses/a11y.md           58767016c3c2de6ddc9097167611108b2b61d2e7b020a50437086d6a14271189
+check_sync templates/agents-dir/lenses/atomic-design.md  40f7e65a40d11872f0e599c638c84556dad1f2510690daa3503e6ae87c80f686
+check_sync templates/agents-dir/lenses/idempotency.md    23b55a5b1c6b1fe94825816dc1541a16057d63ad4765ef7670e2f264e2647e68
+check_sync templates/agents-dir/lenses/security-boundary.md  c6126465c617e589ddfa885416386e01fcc1c35c1e62040d9bb0c2020db042a6
 
 # --- fixture repo ---
 FIXTURE="$(mktemp -d)"
@@ -146,6 +181,14 @@ else
   fail "todo/fixme markers count >= 1 (got '${TODO_COUNT:-none}')"
 fi
 
+# --- gauges: one machine-comparable line of repo-level counts ---
+# Pinned values are the fixture's known answers: big.js is the largest authored
+# file at 400 lines, the fixture's own code carries exactly 1 TODO (the footprint's
+# 600 are excluded), and it has no test files. The counts that grow with the
+# fixture are asserted present, not pinned.
+assert_grep "gauges: line present with pinned fixture values" \
+  "^gauges: files=[0-9][0-9]* loc=[0-9][0-9]* largest=400 todos=1 dup-candidates=[0-9][0-9]* test-files=0$" "$OUT"
+
 # --- footprint: .agents/ is the harness's output, never the target's evidence ---
 # The counted sections must not quote it. Asserting on the path rather than on a
 # count keeps this honest as the fixture grows: "agents dir:" prints a bare
@@ -172,12 +215,16 @@ assert_grep "gates: idempotency evidence names the consumer" \
 # other gate declined. Without this, a gate hardwired to fire would pass.
 assert_grep "gates: atomic withheld on a repo with no component UI" \
   "^gates: atomic not-fired$" "$OUT"
+assert_grep "gates: a11y withheld on a repo with no UI markup" \
+  "^gates: a11y not-fired$" "$OUT"
+assert_grep "gates: security withheld on a repo with no routes or handlers" \
+  "^gates: security not-fired$" "$OUT"
 
-# --- gates, the other two directions: a second repo that fires atomic and not
-# idempotency. One fixture can only ever show each gate in one direction, and
-# README.md states the rule as "a fixture it fires on AND a fixture it withholds
-# from" — for BOTH gates, not one each. Without this, deleting the .tsx branch from
-# the atomic gate passes the whole suite.
+# --- gates, the other directions: a second repo that fires atomic, a11y, and
+# security while idempotency withholds. One fixture can only ever show each gate in
+# one direction, and README.md states the rule as "a fixture it fires on AND a
+# fixture it withholds from" — for EVERY gate, not one each. Without this, deleting
+# the .tsx branch from the atomic gate passes the whole suite.
 FIXTURE2="$FIXTURE.ui"
 mkdir -p "$FIXTURE2/src/components"
 git -C "$FIXTURE2" init -q
@@ -190,6 +237,17 @@ cat > "$FIXTURE2/src/components/Button.tsx" <<'EOF'
 export function Button({ label }: { label: string }) {
   return <button>{label}</button>;
 }
+EOF
+# A mutating route with request data concatenated into SQL: fires the security
+# gate. Kept free of the idempotency vocabulary above so that gate still has
+# nothing to fire on — this fixture must show security firing while idempotency
+# withholds, on the same run.
+cat > "$FIXTURE2/src/server.js" <<'EOF'
+const app = express();
+app.post('/items', (req, res) => {
+  db.run("INSERT INTO items (name) VALUES ('" + req.body.name + "')");
+  res.send('ok');
+});
 EOF
 git -C "$FIXTURE2" add -A
 git -C "$FIXTURE2" -c user.name=fixture -c user.email=fixture@example.com \
@@ -213,6 +271,14 @@ assert_grep "gates: atomic evidence names the component" \
   "^gates: atomic FIRED.*Button\.tsx" "$OUT2"
 assert_grep "gates: idempotency withheld on a repo with no queue or retry" \
   "^gates: idempotency not-fired$" "$OUT2"
+assert_grep "gates: a11y FIRED on component markup" \
+  "^gates: a11y FIRED" "$OUT2"
+assert_grep "gates: a11y evidence names the component" \
+  "^gates: a11y FIRED.*Button\.tsx" "$OUT2"
+assert_grep "gates: security FIRED on the mutating route" \
+  "^gates: security FIRED" "$OUT2"
+assert_grep "gates: security evidence names the server" \
+  "^gates: security FIRED.*src/server\.js" "$OUT2"
 
 # --- determinism: one tree, two locales, byte-identical facts ---
 # The header calls this script a deterministic fact collector, and audit.md quotes

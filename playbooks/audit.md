@@ -9,6 +9,14 @@ Audits judge repo outcomes only — tests, duplication, dead code, teachability.
 presence or absence of harness-owned files (`.agents/`, this repo's playbooks) is
 never a finding.
 
+Three finding slots come from this playbook itself rather than a rubric file:
+`teachability` (step 3), `staleness` (step 2b), and `testing` (step 4's
+missing-evidence rule). These are the audit's **dimensions** — always-on judgment
+categories that need no gate and no rubric file, judged by the numbered step that
+owns each, graded by the same severity anchors, and ranked in the one list with
+everything else. Every finding's principle slot therefore traces to a principle, a
+lens, or a dimension; nothing else may occupy it.
+
 ## Readiness probe
 
 Confirm all of these before proceeding; if any fails, stop and fix it first.
@@ -196,17 +204,10 @@ nothing was written to the target.
 
 ## Anti-rationalization table
 
+Rows whose action a numbered step already mandated were removed 2026-07-26 on
+ablation evidence — see `<harness>/docs/ablations.md`. What remains is the only
+enforcement its excuse has; new rows enter only from an excuse a real run made.
+
 | Excuse | Rebuttal |
 | --- | --- |
-| "This finding is too minor to report." | Rank it low, report it anyway. The ranking is the filter; you are not. |
-| "I'll estimate the line counts / re-derive the facts myself." | Script only. If the script can't produce a fact, its absence is stated — never your estimate. |
-| "The duplication candidate is probably real, no need to read both files." | Candidates are best-effort string matches. Read both files or don't flag it. |
-| "No tests, so I'll skip the testing category." | Skipped categories need an absent evidence base that's legitimately absent. Missing tests is a high-severity finding. |
-| "The repo has our `.agents/` dir, that counts in the repo's favor." | Never. Audits judge outcomes only — harness-owned files are never a finding. |
-| "The footprint rule says skip `.agents/`, so I'll skip the staleness step too." | The rule keeps `.agents/` out of the repo's *grade*. Step 2b judges whether the record is *true* — a different question, and the only thing that catches a seeded file that has quietly started lying. |
-| "The cited file changed, but the convention is probably still fine." | Open the citation. "Probably" is how a void claim survives another six months of sessions trusting it. |
-| "Seeding is a hassle, I'll just go read-only." | Read-only needs an explicit refusal from the user, not your inference. Unasked-for, the answer is seed first. |
-| "Read-only, but the scratch file may as well live in the target — it's one file." | It's still a write to a repo the user said not to write to. The scratch file goes outside the target; if none was named, ask. |
-| "Everything here is low severity." | Grade against the severity anchors in `principles.md`. Absent tests and broken correctness are high, whatever the fix costs. |
-| "This lens is in `.agents/lenses/` but doesn't really fit this repo — I'll skip it." | Its gate fired at seed time on recorded evidence. Present means applies; disagreement goes in the report, not into a silent skip. |
 | "No `lenses/` directory, but this is clearly a UI repo — I'll apply the atomic lens anyway." | Lenses are chosen by seeding, from gates, and copied into the target. An uncopied lens is not in scope for the audit; re-seed if the repo changed. |
