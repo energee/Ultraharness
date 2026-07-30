@@ -9,6 +9,14 @@ Audits judge repo outcomes only — tests, duplication, dead code, teachability.
 presence or absence of harness-owned files (`.agents/`, this repo's playbooks) is
 never a finding.
 
+Three finding slots come from this playbook itself rather than a rubric file:
+`teachability` (step 3), `staleness` (step 2b), and `testing` (step 4's
+missing-evidence rule). These are the audit's **dimensions** — always-on judgment
+categories that need no gate and no rubric file, judged by the numbered step that
+owns each, graded by the same severity anchors, and ranked in the one list with
+everything else. Every finding's principle slot therefore traces to a principle, a
+lens, or a dimension; nothing else may occupy it.
+
 ## Readiness probe
 
 Confirm all of these before proceeding; if any fails, stop and fix it first.

@@ -55,12 +55,13 @@ Create a fresh directory in a temp dir and `git init` it. It must have, at minim
   applied rather than whether the script ran.
 - At least one file large enough to appear in the script's `largest files` list.
 - **No lens gate may fire on it.** This fixture is the no-fire case: keep it free of
-  retry/queue/webhook/cron/migration/deploy constructs and of component-UI files
+  retry/queue/webhook/cron/migration/deploy constructs, of component-UI files
   (`.jsx`, `.tsx`, `.vue`, `.svelte`, a `components/` directory with a framework
-  import). Run `bash scripts/audit-checks.sh <fixture>` before seeding and confirm both
-  its `gates:` lines read `not-fired` — if one fires, adjust the fixture, because step 3
-  asserts a no-lens footprint and a fixture that quietly fires a gate would mask a real
-  defect.
+  import), of UI markup files (`.html`, server templates), and of route or
+  HTTP-handler registrations. Run `bash scripts/audit-checks.sh <fixture>` before
+  seeding and confirm every `gates:` line reads `not-fired` — if one fires, adjust the
+  fixture, because step 3 asserts a no-lens footprint and a fixture that quietly fires
+  a gate would mask a real defect.
 
 Commit everything on the fixture's current branch, so seeding starts from a clean
 tree. Record the fixture path; every command below runs against it.
@@ -159,12 +160,14 @@ fires a gate and one that does not.
 
 Build a second fixture, `<fixture2>`, in its own temp dir: same minimum as step 2
 (README, real test command, manifest), plus one construct that fires the idempotency
-gate and nothing that fires the atomic gate — e.g. a queue consumer that handles a
-message and inserts a row, with a retry wrapper around it, and no component-UI files.
+gate and nothing that fires any other gate — e.g. a queue consumer that handles a
+message and inserts a row, with a retry wrapper around it, and no component-UI,
+markup, or route files.
 Commit it. Run `playbooks/seed.md` against it as written, then assert:
 
 - The script said so before the agent did: the run's `audit-checks.sh` report reads
-  `gates: idempotency FIRED` naming a real path, and `gates: atomic not-fired`. This is
+  `gates: idempotency FIRED` naming a real path, and every other `gates:` line
+  `not-fired`. This is
   the assertion that separates "the gate discriminated" from "the agent guessed
   correctly" — the seeded footprint below is only trustworthy if it traces to this line.
 
@@ -383,14 +386,29 @@ deterministically.
   `playbooks/resume.md`'s first triage state (non-empty worktree status → continue
   from fix or verify), does not re-cut the worktree, and lands the finding exactly
   once.
+- **review-guard-removal** — seed a fixture whose code carries a real guard (e.g. a
+  handler that rejects a request missing a required field), then commit a diff that
+  deletes the guard while presenting itself as cleanup. Run `playbooks/review.md` on
+  that diff and assert: the report pins base and tip, one finding graded **high**
+  names the deleted guard with the hunk quoted, the closing summary line counts it,
+  and nothing was written into the target — findings in the report only, no ledger
+  entry.
 
 A failed assertion here is a defect in a harness file, exactly as in step 7 — fix the
 smallest thing that explains it and re-run the path. Delete these fixtures with the
 rest (step 6).
 
-### 6. Delete the fixture
+### 6. Unseed, then delete the fixtures
 
-Remove every temp dir this run created — `<fixture>`, `<fixture2>`, and `<fixture3>`.
+First run `playbooks/unseed.md` against `<fixture>`, as written, and assert the
+footprint is gone the way step 3 asserted it arrived: `git -C <fixture> ls-files
+.agents/` prints nothing, no root file contains `harness:begin`, `.gitignore` carries
+no `.agents/worktrees/` line, a commit `Unseed .agents/ harness` exists, and the tree
+is clean. Seeding's inverse is a destructive path, which is exactly why it runs here,
+against a fixture, every time — a deletion playbook proven only by reading it would
+be proven on a real repo eventually.
+
+Then remove every temp dir this run created — `<fixture>`, `<fixture2>`, and `<fixture3>`.
 Leaving one behind means the next self-test silently runs against a pre-seeded repo and
 stops testing the seed path at all. `<fixture3>` also carries git worktrees and
 `harness/*` branches from step 5b; deleting its directory takes those with it.
@@ -415,13 +433,14 @@ in `audit-checks.sh`.
 
 ## Not covered
 
-This playbook exercises `seed.md` and `audit.md` end to end, **one** pass of
-`improve.md`/`verify.md` (step 5b), and the clean handoff (step 5e), against real
-fixtures. The hard paths — park and the parked-baseline hard stop, the testless
-verify route, the authority envelope, the mid-pass resume — are covered one per run
-by step 5f's rotation: `<harness>/docs/coverage.md` is the record of which have
-actually run and when, and a path with no row there is unproven, whatever this
-section says.
+This playbook exercises `seed.md`, `audit.md`, and `unseed.md` end to end, **one**
+pass of `improve.md`/`verify.md` (step 5b), and the clean handoff (step 5e), against
+real fixtures. The hard paths — park and the parked-baseline hard stop, the testless
+verify route, the authority envelope, the mid-pass resume, the review guard-removal
+read — are covered one per run by step 5f's rotation: `<harness>/docs/coverage.md`
+is the record of which have actually run and when, and a path with no row there is
+unproven, whatever this section says. `review.md` outside that one path has no
+fixture yet.
 
 Still uncovered by anything: runs longer than two passes. A green self-test says a
 single pass works end to end; it says nothing about the loop across passes.

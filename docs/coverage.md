@@ -12,7 +12,7 @@ no row here has never run and is evidence about nothing. Verdicts: `pass` (the
 assertions held) or `defect` (a harness file needed step 7 — say which and what).
 
 Paths: `park-and-hard-stop`, `testless-verify`, `authority-envelope`,
-`mid-pass-resume`.
+`mid-pass-resume`, `review-guard-removal`.
 
 | date | path | observed | verdict |
 | --- | --- | --- | --- |
@@ -24,6 +24,12 @@ without a cause named in the same run's report is itself a finding — the playb
 length is the harness's biggest compliance risk, and every defect fix tends to add
 lines. The 2026-07-26 baseline follows the table-class removal and the resume split.
 
-| date | audit | improve | resume | seed | self-test | verify | total |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-07-26 | 205 | 388 | 69 | 300 | 454 | 169 | 1585 |
+| date | audit | improve | resume | review | seed | self-test | unseed | verify | total |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-26 | 205 | 388 | 69 | — | 300 | 454 | — | 169 | 1585 |
+| 2026-07-30 | 213 | 392 | 69 | 101 | 300 | 473 | 84 | 169 | 1801 |
+
+2026-07-30 growth, cause named: `review` and `unseed` are new playbooks (columns
+added); audit +8 names the dimensions class; improve +4 records gauges and the
+recurring-wishes tally in the run log; self-test +19 covers the unseed exercise, the
+four-gate fixture rules, and the `review-guard-removal` rotation path.

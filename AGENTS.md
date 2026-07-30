@@ -11,12 +11,16 @@ told to.
 | set up a repo for agent work / first contact with a target | `playbooks/seed.md` |
 | assess a repo's health / find what to improve | `playbooks/audit.md` |
 | actively improve a repo over a long run | `playbooks/improve.md` |
+| judge a proposed change (diff, branch, PR) before it lands | `playbooks/review.md` |
 | prove a change is done | `playbooks/verify.md` |
+| remove the harness footprint from a repo | `playbooks/unseed.md` |
 | check this harness still works | `playbooks/self-test.md` |
 
 Load one playbook at a time. Playbooks reference `principles/` (universal rubrics) and
 `lenses/` (conditional rubrics, each gated on evidence in the target) just-in-time —
-don't preload either.
+don't preload either. A third finding class, **dimensions** (`teachability`,
+`staleness`, `testing`), lives in the playbooks themselves: always-on judgment
+categories with no rubric file and no gate.
 
 ## Global rules
 
