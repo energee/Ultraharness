@@ -292,10 +292,14 @@ loop, envelope permitting.
 However a run ends — the queue drained and confirmed empty (step 9), an envelope
 trip, or any stop below — append one line to `<harness>/docs/runs.md` before the
 final report: date, target, findings done / parked / still open, the verdict mix,
-and anything step 8's "say what you wished you had" produced. One line per run, not
-per pass. Fixtures built by `playbooks/self-test.md` are not runs — self-test improve
-passes skip this line. The log is telemetry about the harness, so it lives in the
-harness repo, never in the target.
+the gauges movement (the script's `gauges:` line from this run's first audit and
+from its most recent one, `start → end`), and anything step 8's "say what you wished
+you had" produced. One line per run, not per pass. If the wish matches a line already
+in that file's `## Recurring wishes` tally, increment its `seen` count instead of
+re-recording it — the promotion rule lives with the tally. Fixtures built by
+`playbooks/self-test.md` are not runs — self-test improve passes skip this line. The
+log is telemetry about the harness, so it lives in the harness repo, never in the
+target.
 
 ### Authority envelope
 

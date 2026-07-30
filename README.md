@@ -27,7 +27,9 @@ Gemini CLI, OpenCode, and any other agent that can read files and run shell comm
 | Seed | `Read ~/harness/AGENTS.md, then run the seed playbook against my repo at <target-path>.` |
 | Audit | `Read ~/harness/AGENTS.md, then run the audit playbook against my repo at <target-path>.` |
 | Improve | `Read ~/harness/AGENTS.md, then run the improve playbook against my repo at <target-path>.` |
+| Review | `Read ~/harness/AGENTS.md, then run the review playbook on <the change> in <target-path>.` |
 | Verify | `Read ~/harness/AGENTS.md, then run the verify playbook on the change I just made in <target-path>.` |
+| Unseed | `Read ~/harness/AGENTS.md, then run the unseed playbook against my repo at <target-path>.` |
 | Self-test | `Read ~/harness/AGENTS.md, then run the self-test playbook.` |
 
 If you cloned somewhere else, use that path instead — nothing depends on the location.
@@ -37,7 +39,7 @@ re-running seed refreshes an already-seeded repo.
 Start with seed. Audit and improve both expect a seeded repo — or tell the audit your
 repo must not be written to, and it runs read-only.
 
-## The five playbooks
+## The seven playbooks
 
 Each opens with a readiness probe (what must be true before starting), then a
 workflow and explicit stop conditions. Anti-rationalization rows exist only where the
@@ -66,6 +68,9 @@ thresholded or truncated — a minor finding is ranked low, not omitted. Categor
 no evidence base are skipped, but an evidence base that *should* exist and doesn't is
 itself a high-severity finding: no tests is a finding, not an excuse to skip the
 category. Output ends with a top-3 queue, which is what the improve loop consumes.
+The script also prints one `gauges:` line — files, lines, largest file, TODOs,
+duplication candidates, test files — which improve runs record start → end in
+`docs/runs.md`, so a repo's trend across runs is a diff of two lines, not a memory.
 
 *Read-only mode*: say your repo must not be written to, and the audit seeds nothing
 and writes findings to a scratch file you name, outside the target.
@@ -83,12 +88,28 @@ lives in `playbooks/resume.md`, read only when the ledger shows one — the comm
 never loads it. Every real run appends one line to `docs/runs.md` on exit — the
 harness's durable record of what it has actually done in the wild.
 
+**`review.md` — judge a change before it lands.** The audit's discipline pointed at
+one diff — working tree, branch, or commit range. Same rubrics, lenses, and guard
+precedence; every finding must cite a line the diff added or removed, ranked in the
+one list, nothing suppressed. Judgment only: it runs no commands and writes nothing
+into the repo — proving a change *done* stays verify's job, and the two answer
+different questions ("should it land as written" vs "does it work as claimed").
+Deletions are read against guard precedence, so a guard removal wearing a refactor's
+clothes is a high finding with the hunk quoted.
+
 **`verify.md` — the evidence gate.** Nothing passes on memory, summaries, or a
 subagent's report. Run the commands fresh, read every hunk of the diff, then write one
 of three verdicts backed by quoted output: **PASS**, **PASS (unverified-by-tests)** —
 an honest verdict for a repo with no suite, never a softened PASS — or **FAIL**. On
 FAIL the fix iterates, never the test. Where a fresh context is available the diff goes
 to it, because whoever wrote a change is its worst reader.
+
+**`unseed.md` — seeding's inverse.** Removes the footprint — `.agents/`, the pointer
+blocks, the one ignore rule — and nothing else, in one commit whose revert is a
+re-seed with the old record intact. It stops for a live run (a worktree or an
+`in-progress` ledger entry) and reports whatever the ledger still held open or parked
+before the tree's copy goes. A repo that was never seeded gets "not seeded, nothing
+to do" — success, not an error.
 
 **`self-test.md` — prove the harness still works.** Builds throwaway fixtures in a
 temp dir, runs the real playbooks against them, and asserts on what actually landed.
@@ -125,6 +146,10 @@ deliberately no handoff summary: a summary is written by the most depleted conte
 the run, from memory, while the ledger was written by a fresh one at each step. If that
 one line is not enough, the ledger is what gets fixed.
 
+Leaving is as clean as arriving: `unseed.md` removes the footprint — `.agents/`, the
+pointer blocks, the ignore rule — and nothing else. History keeps the record, and the
+unseed commit's revert is a re-seed with the old ledger intact.
+
 **The record is checked, not trusted.** `conventions.md`, and both the commands block and
 the repo summary of `AGENTS.md`, carry a `recorded-at` stamp — the commit they were
 observed at. Every claim cites a file, and nothing derivable from the code is recorded at
@@ -135,7 +160,7 @@ alongside everything else instead of being believed. Citations are also opened a
 written, because the stamp catches only what *moved*: a claim that was false the day it
 was recorded would otherwise survive every drift check, forever.
 
-## Rubrics and lenses
+## Rubrics, lenses, and dimensions
 
 Five rubrics apply to every repo: **DRY**, **KISS**, **SOLID**, **YAGNI**, and
 **fail-fast**. Each states how to spot it, how to fix it (smallest intervention first),
@@ -145,6 +170,12 @@ flagged as defects.
 Fail-fast is the odd one out: swallowed errors, silent defaults on required config, and
 errors flattened into `null` are invisible to `audit-checks.sh` — no metric reports
 them — so it is the rubric that proves an audit read code rather than quoted facts.
+
+Between the rubrics and the lenses sit the audit's **dimensions** — `teachability`,
+`staleness`, and `testing`: always-on judgment categories owned by numbered steps of
+`playbooks/audit.md` rather than by rubric files, with no gate to pass. Same severity
+anchors, same single ranked list. Every finding's principle slot traces to a rubric,
+a lens, or a dimension — nothing else may occupy it.
 
 **Lenses** are conditional rubrics for things not every repo has. Each adds one
 section the five rubrics don't have: a **gate**, a condition evaluated against your repo
@@ -165,6 +196,8 @@ not fire.
 | --- | --- | --- |
 | `idempotency` | retries, a queue or scheduler, migrations, webhooks, deploy scripts | a retried write with no upsert or dedup, a backfill with no re-run guard, a script that breaks on its second run |
 | `atomic` | a component-based UI | design tokens duplicated across components, prop drilling, a component library with no entry point |
+| `security` | route registrations, HTTP handlers, controller/middleware paths | a mutating route with no auth check, request data concatenated into SQL or a shell command, an unverified webhook, a credential in source |
+| `a11y` | authored UI markup — `.html`, component files, server templates | an image with no text alternative, a click handler on a `<div>`, a form control with no name |
 
 A repo where no gate fires gets no `lenses/` directory and **not one added line** —
 that is the point of gating, and the self-test asserts it. Re-seeding re-evaluates the
@@ -204,7 +237,7 @@ from, and neither exists until you build it.
 ```
 AGENTS.md                 # the front door: routes by decision to one playbook
 CLAUDE.md                 # thin shim: @AGENTS.md plus Claude-specific deltas
-playbooks/                # seed, audit, improve (+ resume), verify, self-test
+playbooks/                # seed, audit, improve (+ resume), review, verify, unseed, self-test
 principles/               # DRY, KISS, SOLID, YAGNI, fail-fast — full-form rubrics
 lenses/                   # conditional rubrics, each with a Gate section
 templates/agents-dir/     # the .agents/ skeleton seed.md instantiates
@@ -227,7 +260,8 @@ For the end-to-end check, point an agent at `playbooks/self-test.md`. It seeds,
 re-seeds, audits, proves the lens gates both fire *and* withhold, runs a full
 improve/verify pass, breaks the seeded record on purpose to confirm the staleness check
 catches it, and hands a live run to a fresh context to prove the ledger really is
-enough to resume from — all against throwaway fixtures, then deletes them.
+enough to resume from — all against throwaway fixtures. Then it unseeds a fixture to
+prove leaving is as clean as arriving, and deletes them all.
 
 It also ablates one anti-rationalization row per run: remove the row, hand the modified
 playbook to a fresh context, and see whether the excuse shows up. A rule no agent ever
