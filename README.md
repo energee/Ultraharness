@@ -246,3 +246,7 @@ it: instructions cannot force compliance, so a self-test is evidence about the a
 and model tier that executed it as much as about the harness. Run it with the same
 agent you intend to point at your repos before trusting that agent with an
 unattended improve run.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
