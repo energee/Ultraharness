@@ -289,16 +289,19 @@ assert_grep "gates: security evidence names the server" \
 # (grep exits on the first match before locale finishes writing), which reports the
 # locale as missing on a machine that has it — the check would skip itself forever.
 LOCALES="$(locale -a 2>/dev/null || true)"
+# glibc spells it en_US.utf8, BSD/macOS en_US.UTF-8 — accept either and run the
+# check under the exact name this machine advertises, so neither platform skips.
 case "$LOCALES" in
-  *en_US.UTF-8*) HAVE_UTF8=yes ;;
-  *)             HAVE_UTF8=no ;;
+  *en_US.UTF-8*) UTF8_LOCALE=en_US.UTF-8 ;;
+  *en_US.utf8*)  UTF8_LOCALE=en_US.utf8 ;;
+  *)             UTF8_LOCALE= ;;
 esac
-if [ "$HAVE_UTF8" = yes ]; then
+if [ -n "$UTF8_LOCALE" ]; then
   OUT_C="$FIXTURE.out.c"
   OUT_U="$FIXTURE.out.utf8"
   set +e
-  LC_ALL=C            bash "$AUDIT" "$FIXTURE" > "$OUT_C" 2>&1; RC_C=$?
-  LC_ALL=en_US.UTF-8  bash "$AUDIT" "$FIXTURE" > "$OUT_U" 2>&1; RC_U=$?
+  LC_ALL=C              bash "$AUDIT" "$FIXTURE" > "$OUT_C" 2>&1; RC_C=$?
+  LC_ALL="$UTF8_LOCALE" bash "$AUDIT" "$FIXTURE" > "$OUT_U" 2>&1; RC_U=$?
   set -e
   # Exit status first. Swallowing both with `|| true` and comparing only the bytes
   # let this assertion pass on a script that died early under BOTH locales — two
@@ -311,14 +314,14 @@ if [ "$HAVE_UTF8" = yes ]; then
   elif ! cmp -s "$OUT" "$OUT_C"; then
     fail "determinism: C-locale run differs from the verified report (first diff: $(diff "$OUT" "$OUT_C" | head -4 | tr '\n' ' '))"
   elif cmp -s "$OUT_C" "$OUT_U"; then
-    pass "determinism: identical output under C and en_US.UTF-8"
+    pass "determinism: identical output under C and $UTF8_LOCALE"
   else
-    fail "determinism: identical output under C and en_US.UTF-8 (first diff: $(diff "$OUT_C" "$OUT_U" | head -4 | tr '\n' ' '))"
+    fail "determinism: identical output under C and $UTF8_LOCALE (first diff: $(diff "$OUT_C" "$OUT_U" | head -4 | tr '\n' ' '))"
   fi
 else
   # Not a pass. An assertion that did not run has no result, and saying so is the
   # whole point of the check.
-  printf 'SKIP: %s\n' "determinism: en_US.UTF-8 locale unavailable on this machine"
+  printf 'SKIP: %s\n' "determinism: no en_US UTF-8 locale available on this machine"
 fi
 
 # --- nonexistent path exits 2 ---

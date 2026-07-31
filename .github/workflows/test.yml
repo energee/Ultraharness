@@ -1,0 +1,14 @@
+# Runs the harness's own suite (scripts/test.sh — audit-checks assertions plus the
+# rubric sync tripwire) on every push and PR, on both Linux (GNU toolchain) and
+# macOS (BSD toolchain), the two platforms audit-checks.sh claims to support.
+name: test
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/test.sh
