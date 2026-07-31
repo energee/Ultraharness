@@ -120,7 +120,14 @@ of absence instead: the record's `none`, and the check that it is not stale (the
 introduces no test files). That is the honest output for that verdict. Do **not** invent
 a run to fill the gap — a smoke command you wrote yourself is not the repo's suite, and
 a verdict that quotes one reads as coverage that does not exist. If you ran something ad
-hoc to satisfy your own curiosity, it does not belong in the evidence block.
+hoc to satisfy your own curiosity, it does not belong in the evidence block. The one
+exception is labeled equipment: for a web-facing change whose page the target's own
+serve command can stand up, you may run `<harness>/scripts/smoke-check.sh <url>
+--expect <string>` and quote its output under a separate `smoke:` label. It is harness
+equipment, not the repo's suite: its success never upgrades the verdict, and
+`browser: unavailable` means omit the label entirely — but `fetch: FAILED` or
+`expect … NOT FOUND` on the page the change touched is a real failed run, and that
+is FAIL.
 
 - **PASS** requires: every recorded command ran fresh and succeeded, the full diff
   was read, and step 4 raised nothing.

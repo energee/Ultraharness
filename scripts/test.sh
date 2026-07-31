@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# test.sh — bash test harness for scripts/audit-checks.sh, plus the rubric sync
-# tripwire pinning full-form rubrics to their condensed twins.
+# test.sh — bash test harness for scripts/audit-checks.sh and scripts/smoke-check.sh,
+# plus the rubric sync tripwire pinning full-form rubrics to their condensed twins.
 # Builds a throwaway fixture repo in a temp dir, runs audit-checks.sh against it,
 # and asserts on the printed facts with grep. Prints PASS/FAIL per assertion and
 # exits nonzero if any assertion fails. No dependencies beyond git + coreutils.
@@ -63,7 +63,7 @@ check_sync templates/agents-dir/lenses/security-boundary.md  c6126465c617e589ddf
 
 # --- fixture repo ---
 FIXTURE="$(mktemp -d)"
-trap 'rm -rf "$FIXTURE" "$FIXTURE".out* "$FIXTURE".ui' EXIT
+trap 'kill "$(cat "$FIXTURE.web/pid" 2>/dev/null)" 2>/dev/null || true; rm -rf "$FIXTURE" "$FIXTURE".out* "$FIXTURE".ui "$FIXTURE".web' EXIT
 
 git -C "$FIXTURE" init -q
 cat > "$FIXTURE/package.json" <<'EOF'
@@ -330,6 +330,56 @@ bash "$AUDIT" "$FIXTURE/does-not-exist" > /dev/null 2>&1
 RC2=$?
 set -e
 if [ "$RC2" -eq 2 ]; then pass "nonexistent path exits 2"; else fail "nonexistent path exits 2 (got $RC2)"; fi
+
+# --- smoke-check.sh: optional browser evidence ---
+# The optionality contract is the tested thing: absence must be a printed fact and a
+# distinct exit code on every machine, browser or not. The live path runs only when a
+# binary is supplied — the locale check's SKIP precedent, for the same reason.
+SMOKE="$SCRIPT_DIR/smoke-check.sh"
+set +e
+bash "$SMOKE" > /dev/null 2>&1; RC_SU=$?
+set -e
+if [ "$RC_SU" -eq 2 ]; then pass "smoke: no url exits 2"; else fail "smoke: no url exits 2 (got $RC_SU)"; fi
+OUT_SM="$FIXTURE.out.smoke"
+set +e
+LIGHTPANDA_BIN=/nonexistent bash "$SMOKE" "http://127.0.0.1:1/" > "$OUT_SM" 2>&1; RC_SA=$?
+set -e
+if [ "$RC_SA" -eq 3 ]; then pass "smoke: missing browser exits 3"; else fail "smoke: missing browser exits 3 (got $RC_SA)"; fi
+assert_grep "smoke: absence is a printed fact, not an error" "^browser: unavailable" "$OUT_SM"
+
+SMOKE_BIN="${LIGHTPANDA_BIN:-$(command -v lightpanda || true)}"
+if [ -n "$SMOKE_BIN" ] && [ -x "$SMOKE_BIN" ] && command -v python3 > /dev/null 2>&1; then
+  WEB="$FIXTURE.web"
+  mkdir -p "$WEB"
+  printf '<html><head><title>smoke-fixture</title></head><body>smoke-marker-7f3a</body></html>' > "$WEB/index.html"
+  # -u so the "Serving HTTP ... port N" line is unbuffered; port 0 = OS-assigned.
+  (cd "$WEB" && python3 -u -m http.server 0 --bind 127.0.0.1 > "$WEB/server.log" 2>&1 & echo $! > "$WEB/pid")
+  PORT=""
+  for _ in $(seq 1 20); do
+    PORT="$(sed -n 's/.*port \([0-9][0-9]*\).*/\1/p' "$WEB/server.log" | head -1)"
+    [ -n "$PORT" ] && break
+    sleep 0.25
+  done
+  if [ -z "$PORT" ]; then
+    fail "smoke live: local http server never came up"
+  else
+    OUT_SL="$FIXTURE.out.smokelive"
+    set +e
+    bash "$SMOKE" "http://127.0.0.1:$PORT/" --expect smoke-marker-7f3a > "$OUT_SL" 2>&1; RC_SL=$?
+    set -e
+    if [ "$RC_SL" -eq 0 ]; then pass "smoke live: exit 0 on served fixture"; else fail "smoke live: exit 0 on served fixture (got $RC_SL — $(tail -2 "$OUT_SL" | tr '\n' ' '))"; fi
+    assert_grep "smoke live: title fact printed" "^title: smoke-fixture" "$OUT_SL"
+    assert_grep "smoke live: expect found" "^expect 'smoke-marker-7f3a': found" "$OUT_SL"
+    set +e
+    bash "$SMOKE" "http://127.0.0.1:$PORT/" --expect not-on-this-page > "$OUT_SL.miss" 2>&1; RC_SM2=$?
+    set -e
+    if [ "$RC_SM2" -eq 5 ]; then pass "smoke live: missing expect exits 5"; else fail "smoke live: missing expect exits 5 (got $RC_SM2)"; fi
+    assert_grep "smoke live: NOT FOUND printed" "NOT FOUND" "$OUT_SL.miss"
+  fi
+  kill "$(cat "$WEB/pid")" 2>/dev/null || true
+else
+  printf 'SKIP: %s\n' "smoke live path: no browser supplied (set LIGHTPANDA_BIN to run it)"
+fi
 
 echo
 if [ "$FAILS" -eq 0 ]; then
