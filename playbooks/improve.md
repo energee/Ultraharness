@@ -88,7 +88,10 @@ Loop the following. One pass = one finding.
 - **If readiness step 5 found no test suite at all**, the missing suite is finding #1
   under slug `missing-tests`, ranked above everything already in the queue, subject to
   the same guard. The audit may also raise it under a slug of its own — if so, that is
-  this entry; rename it rather than tracking two.
+  this entry; rename it rather than tracking two. For a web target, the smallest suite
+  that closes `missing-tests` can be one browser smoke test committed into the target —
+  written against CDP (`connectOverCDP`) so the browser stays swappable: Chromium by
+  default, Lightpanda where its memory and startup budget earn it.
 
 ### 2. Pick
 

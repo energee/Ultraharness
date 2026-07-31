@@ -4,8 +4,8 @@ Point any coding agent at this repo to make **another** repo simpler, DRY-er, KI
 SOLID, and YAGNI — plus conditional lenses (idempotency, atomic design) that apply
 only if the repo has the thing they judge. There is no install and no runtime —
 everything here is markdown
-plus two thin bash scripts. The agent reads a front door, routes to a playbook, and
-does the rest.
+plus three thin bash scripts (one opt-in). The agent reads a front door, routes to a
+playbook, and does the rest.
 
 It never operates on itself unless you explicitly say so. `<target>` below is your
 repo; `<harness>` is this one.
@@ -110,7 +110,9 @@ subagent's report. Run the commands fresh, read every hunk of the diff, then wri
 of three verdicts backed by quoted output: **PASS**, **PASS (unverified-by-tests)** —
 an honest verdict for a repo with no suite, never a softened PASS — or **FAIL**. On
 FAIL the fix iterates, never the test. Where a fresh context is available the diff goes
-to it, because whoever wrote a change is its worst reader.
+to it, because whoever wrote a change is its worst reader. For a web-facing change an
+optional browser smoke check can add live-page facts — see "Optional browser evidence"
+below.
 
 **`unseed.md` — seeding's inverse.** Removes the footprint — `.agents/`, the pointer
 blocks, the one ignore rule — and nothing else, in one commit whose revert is a
@@ -122,6 +124,41 @@ to do" — success, not an error.
 **`self-test.md` — prove the harness still works.** Builds throwaway fixtures in a
 temp dir, runs the real playbooks against them, and asserts on what actually landed.
 Reading a playbook and judging it sound is explicitly not a result.
+
+## Optional browser evidence
+
+Everything above runs on git, bash, and coreutils. This one feature is different, and
+is opt-in: `scripts/smoke-check.sh` needs a browser binary you supply. If you never
+supply one, nothing changes — no playbook requires it, its absence is never a finding,
+and no verdict blocks on it.
+
+What it adds: live-page facts for web targets. Verify's honest verdict for a repo
+with no suite, `PASS (unverified-by-tests)`, leaves the page itself as evidence going
+unused. The script fetches one URL with
+[Lightpanda](https://github.com/lightpanda-io/browser) — a single static-binary
+headless browser — and prints facts in the `audit-checks.sh` mold:
+
+```
+smoke-check v1 — url: http://127.0.0.1:3000
+browser: lightpanda 1.0.0-nightly.8450
+fetched: 272494 bytes in 2s
+title: My App
+expect 'Sign out': found
+```
+
+Supply the browser in two lines (macOS arm64 shown; Linux: `lightpanda-x86_64-linux`):
+
+```
+curl -L -o lightpanda https://github.com/lightpanda-io/browser/releases/download/nightly/lightpanda-aarch64-macos
+chmod +x lightpanda && export LIGHTPANDA_BIN="$PWD/lightpanda"
+```
+
+The harness never bundles or downloads it — that is what keeps "no install, no
+runtime" true for everyone who doesn't opt in. Two honest limits: Lightpanda is beta
+with partial Web API coverage, and it renders no pixels — this proves a page stands up
+and its DOM says what it should, never how it looks. And a smoke fact is not a test
+suite: the verdict for a testless repo stays `PASS (unverified-by-tests)`; only a
+*failed* smoke check changes anything, and what it changes it to is FAIL.
 
 ## What gets left behind
 
@@ -250,7 +287,8 @@ principles/               # DRY, KISS, SOLID, YAGNI, fail-fast — full-form rub
 lenses/                   # conditional rubrics, each with a Gate section
 templates/agents-dir/     # the .agents/ skeleton seed.md instantiates
 scripts/audit-checks.sh   # deterministic fact collector (git + grep + awk only)
-scripts/test.sh           # bash tests for the fact collector + rubric sync tripwire
+scripts/test.sh           # bash tests for the fact collectors + rubric sync tripwire
+scripts/smoke-check.sh    # optional browser evidence — needs a user-supplied Lightpanda
 docs/ablations.md         # which instruction rules have been tested, and how
 docs/coverage.md          # hard-path rotation record + playbook prose budget
 docs/runs.md              # one line per real improve run — the field record
@@ -259,7 +297,9 @@ docs/runs.md              # one line per real improve run — the field record
 ## Testing the harness itself
 
 Run `bash scripts/test.sh` from this repo's root — the bash tests for
-`scripts/audit-checks.sh`, plus a sync tripwire that pins each full-form rubric to
+`scripts/audit-checks.sh` and `scripts/smoke-check.sh` (the browser-present
+assertions run only when a binary is supplied, and print `SKIP` otherwise), plus a
+sync tripwire that pins each full-form rubric to
 its condensed twin by hash: editing either fails the suite until the pair is
 deliberately re-synced, so the designed-in duplication cannot drift silently. Every
 assertion prints `PASS` and the run exits 0.

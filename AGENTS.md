@@ -29,6 +29,10 @@ categories with no rubric file and no gate.
   clobbered.
 - All findings are ranked — never report a partial list.
 - Evidence before claims: no completion claim without fresh output to back it.
+- Browser evidence is optional equipment. `scripts/smoke-check.sh` runs only with a
+  user-supplied Lightpanda binary (`LIGHTPANDA_BIN` or on PATH); the harness never
+  bundles, downloads, or requires one. A missing browser is a printed fact — never a
+  finding against the target, never a blocked verdict, never an error.
 - **The harness footprint is never evidence about the target.** Everything under
   `<target>/.agents/` and the `<!-- harness:begin -->`…`<!-- harness:end -->` blocks in
   the target's root `AGENTS.md` / `CLAUDE.md` is your own output. Never count it, judge
