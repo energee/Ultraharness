@@ -39,6 +39,14 @@ re-running seed refreshes an already-seeded repo.
 Start with seed. Audit and improve both expect a seeded repo — or tell the audit your
 repo must not be written to, and it runs read-only.
 
+Claude Code users get the same prompts as slash commands when the session is started
+from this repo — `/seed`, `/audit`, `/improve`, `/review`, `/verify`, `/unseed` (each
+taking `<target-path>`), and `/self-test` — thin launchers in `.claude/commands/`
+that route through `AGENTS.md` exactly like the prompts above; copy them into
+`~/.claude/commands/` to use them from any directory. CI
+(`.github/workflows/test.yml`) runs `scripts/test.sh` on every push and PR, on Linux
+and macOS.
+
 ## The seven playbooks
 
 Each opens with a readiness probe (what must be true before starting), then a
