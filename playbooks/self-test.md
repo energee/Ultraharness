@@ -37,6 +37,26 @@ the previous line, name the cause in your report — a budget nobody reads is no
 budget, and growth with no named cause is a finding against whatever run added the
 lines.
 
+### 1a. Prove ledger graph analysis on a throwaway record
+
+Create `<graph-fixture>` in a fresh temp directory outside `<harness>`, with a seeded
+ledger-shaped Markdown file containing three typed open findings: two with
+`depends-on: none` and disjoint writes, and a third depending on both. Put a space in
+the fixture path and a comma in at least one declared path. Run
+`bash <harness>/scripts/ledger-graph.sh <graph-fixture>/ledger.md` and assert:
+
+- exit 0, `serial fallback required: no`, both independent IDs under `ready
+  findings`, and the dependent under `blocked findings` naming both open blockers;
+- no cycle, missing ID, write conflict, or malformed field; and
+- the ledger's `git hash-object` value is identical before and after analysis.
+
+Run it again under `LC_ALL=C` and the advertised `en_US.UTF-8` / `en_US.utf8` locale
+when available, requiring byte-identical output and exit status. Then change only the
+scratch record so the two ready findings have parent/child writes, confirm the report
+names their active conflict, and delete `<graph-fixture>`. This is deterministic
+analysis evidence, not authorization for concurrent mutation; improve's wave contract
+remains a separate policy.
+
 ### 2. Build the fixture repo
 
 Create a fresh directory in a temp dir and `git init` it. It must have, at minimum:
@@ -220,11 +240,18 @@ Then run `playbooks/improve.md` against it with the safety envelope overridden t
 - **Verify ran for real**: the pass's verdict is one of the three verdicts, and it
   quotes fresh command output. A verdict with no quoted output is a defect in
   `verify.md`, not a formatting nit.
+- **Pinned evaluator ran after update**: after the `fix(<slug>):` commit exists and
+  immediately before merge, the evaluator record names that exact commit, current
+  base and exact diff artifact, verifier identity or `same-context fallback`, fresh
+  command summaries, full diff-review evidence, and applicable principle/lens files.
+  Its verdict is a PASS form; a worktree-only record cannot satisfy this assertion.
 - **Merge back**: the base branch carries a commit whose first line begins exactly
   `fix(<slug>): `, with no Co-Authored-By line, and the fix is present in the
   fixture's working tree.
 - **Ledger before deletion**: the entry reads `status: done` with a `delta` quoting
-  real before/after evidence, and only then are the worktree and branch gone —
+  real before/after evidence, `fixed-by` naming the candidate, repeatable `evidence`
+  covering commands and diff review, and `verified-by` binding identity to that same
+  commit. Only then are the worktree and branch gone —
   `git -C <fixture3> worktree list` shows one entry and `git -C <fixture3> branch
   --list 'harness/*'` is empty.
 - **Checkpoint**: `git -C <fixture3> status --porcelain` is empty — the ledger update
@@ -442,8 +469,11 @@ is the record of which have actually run and when, and a path with no row there 
 unproven, whatever this section says. `review.md` outside that one path has no
 fixture yet.
 
-Still uncovered by anything: runs longer than two passes. A green self-test says a
-single pass works end to end; it says nothing about the loop across passes.
+Still uncovered by anything: runs longer than two passes and actual concurrent fix
+execution. Step 1a and `scripts/test.sh` prove deterministic wave inputs, and step 5b
+proves the serial landing gate for one finding; neither launches parallel mutation.
+A green self-test therefore says nothing about multi-pass or concurrent-worker
+orchestration.
 
 Step 5c tests exactly **one** remaining anti-rationalization row per run, and only
 when a fresh context is available. Every untested row is an unfalsified claim.

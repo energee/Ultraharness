@@ -42,7 +42,12 @@ in the principle slot. Which fired, and on what evidence:
 ## Ongoing work
 
 `ledger.md` tracks findings and their status across sessions. Read it before starting
-work so you don't redo or collide with existing entries; update it as you go.
+work so you don't redo or collide with existing entries; update it as you go. Its
+optional typed fields record dependencies, write scope, acceptance, and verification
+provenance. When using the harness, run
+`bash <harness>/scripts/ledger-graph.sh .agents/ledger.md` to inspect ready work and
+conflicts; a serial-fallback report keeps legacy entries in their existing
+one-at-a-time flow.
 `learnings.md` holds lessons from past sessions — check it for known traps.
 
 ## Worktrees

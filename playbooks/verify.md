@@ -5,6 +5,10 @@ is complete. This playbook exists because "done" claims without fresh evidence a
 the single most common way agent work goes wrong. Nothing passes this gate on
 memory, summaries, or prior runs — only on output produced *now*.
 
+Verification is a distinct evaluator node. Its authoritative inputs and fixed output
+are defined below; the evaluator must not read or rely on the implementer's
+conversation, plan, reasoning, or prose summary.
+
 `<target>` below is the repo containing the change. The target's test/build/
 typecheck commands are the verified ones recorded in `<target>/.agents/AGENTS.md`
 (seeded by `playbooks/seed.md`).
@@ -18,17 +22,58 @@ finding's branch, where step 7 either folds it into the fix commit or deletes it
 the worktree — so the one record written to explain why a run stopped is the one most
 likely to vanish.
 
+## Evaluator node contract
+
+Build a self-contained input packet with exactly these authoritative inputs:
+
+1. **Exact VCS diff artifact.** Write Git's output to a file; never retype it. For a
+   committed candidate use
+   `git diff --binary --full-index --no-ext-diff <base>..<commit> > <artifact>` and
+   record both endpoints. For a preliminary dirty-worktree check, first mark
+   untracked files intent-to-add, then write the equivalent `git diff` from `HEAD`.
+2. **Completion claim.** One sentence naming the observable change, not its plan.
+3. **Recorded commands.** The exact test, build, and typecheck values from the
+   candidate's `.agents/AGENTS.md`, including explicit `none` values.
+4. **Applicable judgment.** The candidate's `.agents/principles.md` and every file
+   actually present in `.agents/lenses/`. Presence means the seed gate already fired;
+   verification does not re-litigate it.
+
+A merge-authorizing evaluator node requires an immutable candidate commit and its
+base-to-commit artifact. Dirty-worktree mode is useful preliminary evidence but must
+identify itself as `WORKTREE at <HEAD>` and cannot supply the ledger's final
+`fixed-by` / `verified-by` proof or authorize `done`.
+
+The output is one evaluator record with this shape:
+
+```
+- verdict: PASS | PASS (unverified-by-tests) | FAIL
+- commit: <candidate commit> | WORKTREE at <HEAD>
+- verifier: <fresh verifier identity> | same-context fallback
+- commands: <each exact command, exit status, and fresh summary; or recorded none>
+- diff-review: <base and commit, exact artifact path, and evidence every hunk was read>
+- judgment: <applicable principles/lenses checked and any scope/debug/test/guard finding>
+```
+
+Every output field is required. `verifier` names the actual independent context when
+one ran; if none was available, use the literal `same-context fallback`. The fallback
+is weaker evidence and must be visible, but it is not automatic failure. The `commit`
+in a final record is the commit actually tested and diff-reviewed, and must match the
+ledger's `fixed-by` and the commit suffix in `verified-by`.
+
 ## Readiness probe
 
-1. There is a specific claimed-complete change to verify — you can name it in one
-   sentence.
+1. There is a specific claimed-complete change to verify — name it in one sentence
+   and start the evaluator input packet above. Do not inherit a claim from the
+   implementer's summary.
 2. That change has a diff: run `git -C <target> status --porcelain` and
    `git -C <target> diff HEAD` (or diff against the branch base if the change is
    already committed) and confirm it is non-empty. No diff, nothing to verify —
    stop and report that. If `status` lists untracked files (`??`), they are part of
    the change and `git diff HEAD` omits them entirely: mark them intent-to-add
    (`git -C <target> add -AN`) and re-run the diff, so a new file that carries the
-   whole fix cannot pass step 3 unread.
+   whole fix cannot pass step 3 unread. Pin the base and candidate/HEAD and write the
+   exact artifact as the evaluator contract requires; a terminal scrollback is not
+   the artifact.
 3. `<target>/.agents/AGENTS.md` exists and names the test command. If it records
    `none` or `none verified` for tests — the two mean the same thing here, no suite
    to run — note that up front: the verdict below must be
@@ -76,18 +121,19 @@ subagent; summaries are claims, and this playbook trades only in evidence. While
 reading, check for: changes outside the claimed scope, leftover debug output,
 commented-out code, and any edit that weakens a test or assertion.
 
-**Prefer fresh eyes.** If your environment can start a fresh context — a subagent, a
-second session — hand it the diff and the one-sentence claim from probe item 1, and
-have it answer those same checks. Hand the diff over as **output, not prose**: write
-`git diff` to a file and give the fresh context that path. A diff retyped into a prompt
-is a summary wearing a diff's clothes, and one mistyped line spends the whole review on
-your typo instead of on the change — the exact substitution this step exists to prevent. Nothing else: not the plan, not your reasoning, not
-this conversation. Whoever wrote the change is its worst reader — they know what the
-code was *meant* to do and read that intent into hunks that do not contain it, which
-is the failure this gate exists to catch. Its answer does not replace your own read; a
-finding it raises that you missed is itself evidence about how carefully you read. If
-no fresh context is available, say so in the verdict and read it yourself — that is a
-weaker verification, and the verdict must not hide it.
+**Prefer a fresh evaluator.** If your environment can start a fresh context — a
+subagent or second session — give it the evaluator input packet: exact diff artifact
+path and pinned endpoints, one-sentence claim, recorded commands, and applicable
+principle/lens paths. Nothing else: not the plan, reasoning, prose summary, or this
+conversation. A retyped diff is a summary wearing a diff's clothes, and one mistyped
+line spends the review on the typo instead of the change. Whoever wrote the change is
+its worst reader — they know what the code was meant to do and read that intent into
+hunks that do not contain it. The fresh evaluator runs the recorded commands itself
+and returns the fixed evaluator record. Its answer does not replace the caller's own
+read; a finding it raises that the caller missed is evidence about that read. If no
+fresh context is available, use `same-context fallback`, run and read everything in
+this context, and expose the weaker identity without changing an otherwise supported
+verdict.
 
 ### 4. Check the change against principles
 
@@ -95,6 +141,10 @@ Read `<target>/.agents/principles.md` and hold the diff against it — especiall
 YAGNI and KISS: did the fix itself introduce speculative structure (an abstraction
 with one caller, a config knob nothing sets, a "for future use" seam)? A fix that
 adds new findings is not done.
+
+Read every file present under `<target>/.agents/lenses/` and hold the diff against it
+too. Those are the applicable lenses supplied to the evaluator; an absent lens is not
+loaded or guessed.
 
 Then read the diff's deletions against that file's `## Guard precedence` section: does
 this change remove or weaken validation, an authorization check, an error branch, a
@@ -109,10 +159,14 @@ deleted hunk itself, quoted — it is a reading check, so no command output back
 
 ### 5. Verdict
 
-Write one of three verdicts — **PASS**, **PASS (unverified-by-tests)**, or **FAIL**
-— followed by the evidence — quote the actual
-command outputs (at minimum the final summary lines of each run: counts, exit
-status, failure names). A verdict with no quoted output is invalid; redo the runs.
+Write the evaluator record defined above with one of three verdicts — **PASS**,
+**PASS (unverified-by-tests)**, or **FAIL**. In `commands`, quote the actual output
+(at minimum each final summary line: counts, exit status, and failure names). In
+`diff-review`, name the exact artifact and endpoints and state what the full read found
+about scope, debug output, commented code, and weakened assertions. In `judgment`,
+name the principle and lens files actually checked and any guard result. Missing output
+fields or a command verdict with no quoted output makes the record invalid; redo the
+evaluation.
 
 On the **PASS (unverified-by-tests)** route there may be no recorded command at all —
 no test, no build, no typecheck — and then there is nothing to redo. Quote the evidence
@@ -130,7 +184,8 @@ equipment, not the repo's suite: its success never upgrades the verdict, and
 is FAIL.
 
 - **PASS** requires: every recorded command ran fresh and succeeded, the full diff
-  was read, and step 4 raised nothing.
+  artifact was read, step 4 raised nothing, and every evaluator-record field names
+  the same candidate state.
 - **PASS (unverified-by-tests)** requires: `.agents/AGENTS.md` records `none` or
   `none verified` for tests *and* the diff introduces no test files (so there was
   genuinely no suite to run — see probe item 3), the full diff was read
@@ -152,6 +207,11 @@ back as `parked(authority)` at `attempts: 0/3`, not as a spent budget.
 deleting a test to get to PASS is falsifying the evidence this gate exists to
 collect. If a test is genuinely wrong, that is a separate finding to raise with
 its own evidence — not something to slip into a verification pass.
+
+For a pinned-commit PASS returned to `playbooks/improve.md` step 7, copy the durable
+facts rather than a prose summary: candidate SHA to `fixed-by`, fresh command and
+diff-review facts to repeatable `evidence` lines, and `<verifier> @ <candidate SHA>`
+to `verified-by`. A preliminary `WORKTREE at <HEAD>` record never fills those fields.
 
 ## Stop conditions
 

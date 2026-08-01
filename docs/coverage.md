@@ -28,8 +28,15 @@ lines. The 2026-07-26 baseline follows the table-class removal and the resume sp
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-07-26 | 205 | 388 | 69 | — | 300 | 454 | — | 169 | 1585 |
 | 2026-07-30 | 213 | 392 | 69 | 101 | 300 | 473 | 84 | 169 | 1801 |
+| 2026-07-31 | 213 | 499 | 87 | 101 | 300 | 503 | 84 | 236 | 2023 |
 
 2026-07-30 growth, cause named: `review` and `unseed` are new playbooks (columns
 added); audit +8 names the dimensions class; improve +4 records gauges and the
 recurring-wishes tally in the run log; self-test +19 covers the unseed exercise, the
 four-gate fixture rules, and the `review-guard-removal` rotation path.
+
+2026-07-31 growth, cause named: improve +107 defines bounded graph-aware waves and the
+serial update/verify/merge queue; resume +18 triages wave members and merge-queue
+evictions; verify +67 defines the independent evaluator node and fixed artifact;
+self-test +30 exercises deterministic, non-mutating graph analysis and pins final
+verification provenance. The remaining playbooks did not grow.

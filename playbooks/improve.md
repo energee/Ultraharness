@@ -1,10 +1,13 @@
 # improve.md — the long-runtime fix loop
 
-The long-runtime loop: audit the target, then work the findings queue one at a time —
-isolate, fix minimally, verify, de-sloppify, checkpoint — until the queue is empty or
-the safety envelope trips. The ledger at `<target>/.agents/ledger.md` is the loop's
-memory: every state change is written there first, so a run killed mid-finding can be
-resumed by any agent from the ledger alone.
+<!-- ledger-graph-contract: v1 -->
+
+The long-runtime loop: audit the target, then work the findings queue serially by
+default — isolate, fix minimally, verify, de-sloppify, checkpoint — until the queue is
+empty or the safety envelope trips. A user may opt into the bounded execution waves
+defined below; fix work can then overlap, but landing never does. The ledger at
+`<target>/.agents/ledger.md` is the loop's memory: every state change is written there
+first, so a run killed mid-finding can be resumed by any agent from the ledger alone.
 
 ## Readiness probe
 
@@ -16,7 +19,19 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
 3. Read the ledger top to bottom. Entries with status `in-progress` mean a previous
    run died mid-finding — read `<harness>/playbooks/resume.md` and follow its triage
    before starting anything else. Never start fresh work while an `in-progress` entry
-   sits unexamined. This read also tells item 4 whether this is a resumed run.
+   sits unexamined. This read also tells item 4 whether this is a resumed run. Then run
+   `bash <harness>/scripts/ledger-graph.sh <target>/.agents/ledger.md` and retain its
+   complete report. The script is read-only and deterministic; it is the calculator
+   for readiness and write overlap, never judgment or permission to mutate.
+   - `result: INVALID` (including a missing dependency ID, cycle, or malformed present
+     field) is a hard stop: use the report's root cause, safe next action, and stop
+     condition. Do not reason around or recalculate the graph by hand.
+   - `serial fallback required: yes` is valid compatibility state. Keep the serial
+     path below; do not fill absent fields from guesses. Old seeded ledgers therefore
+     keep working without migration.
+   - Re-run the analyzer whenever a dependency, status, ID, or write set changes, and
+     immediately before selecting work. Field and path semantics live in the ledger's
+     `Typed graph and provenance` section; this playbook owns only execution policy.
 4. **Base branch.** Read the ledger's `Run state` block. A `- base branch:` still
    holding the seeded placeholder — any angle-bracket `<...>` value — is not a
    recorded value; treat it as absent. Then:
@@ -61,7 +76,8 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
 
 ## Workflow
 
-Loop the following. One pass = one finding.
+Loop the following. One pass = one finding; an opted-in wave groups up to three passes
+for fix work only, then lands each pass serially.
 
 ### 1. Get the queue
 
@@ -93,12 +109,50 @@ Loop the following. One pass = one finding.
   written against CDP (`connectOverCDP`) so the browser stays swappable: Chromium by
   default, Lightpanda where its memory and startup budget earn it.
 
+### Execution waves — opt-in fix concurrency, serial landing
+
+Serial execution is the default and is always valid. Parallel fix work requires the
+user to opt in for this run and name a concurrency bound; cap that bound at 3. The
+analyzer never opts in, starts work, or changes the ledger. If it reports serial
+fallback, stay serial even when the user requested a wave.
+
+Form a wave from the analyzer's `ready findings` in existing ledger rank order. Take
+the first ready finding, then add only ready findings that have no reported write
+conflict with anything already selected, stopping at the bound. The dependencies of
+every selected finding must already be `done` before the wave starts; findings in the
+same wave can never satisfy one another. Leave every ready-but-unselected, blocked,
+parked, and conflicting finding in the ledger and report it honestly — a wave changes
+when work runs, never which findings exist or how they rank.
+
+The following always get a one-finding wave even if the user authorized concurrency:
+shared configuration, CI, dependency or lockfile, migration, schema, security-boundary,
+or otherwise high-risk changes. Risk serialization does not grant authority: the
+Authority envelope below still decides whether the change may happen at all. The
+Safety envelope still counts each finding separately, and a wave may not select more
+findings than its remaining finding budget.
+
+Before any concurrent work, update every selected entry to `in-progress`, record its
+`attempted-in` worktree and branch when that optional provenance field is in use, and
+commit that ledger checkpoint on the base branch. One coordinating context owns all
+base-ledger state; concurrent fix contexts write only inside their own worktrees. Each
+finding still follows steps 3–6 independently and gets its own branch, worktree,
+acceptance check, attempts budget, and preliminary verdict. Concurrency ends there.
+Step 7 processes completed candidates through one serial merge queue.
+
+If open findings remain but the analyzer reports no ready finding, stop the run and
+record its named blockers. Do not audit a second queue, suppress the blocked entries,
+or treat a parked prerequisite as done.
+
 ### 2. Pick
 
-Take the highest-ranked `open` finding and choose the smallest intervention that
-owns the problem — the earliest point in the causal chain where one change fixes it,
-not the broadest refactor that would also fix it. Update its ledger entry to
-`status: in-progress` before doing anything else.
+In serial mode, take the highest-ranked `open` finding that the analyzer reports
+ready. On a legacy ledger that is the current behavior: absent dependencies mean no
+declared blocker, while serial fallback permits only one finding. In wave mode, take
+the bounded ranked set formed above. For each selected finding choose the smallest
+intervention that owns the problem — the earliest point in the causal chain where one
+change fixes it, not the broadest refactor that would also fix it. Update its ledger
+entry to `status: in-progress` before doing anything else; the wave checkpoint above
+does this for the whole selected set before concurrency begins.
 
 Three standing rules shape what counts as an improvement:
 
@@ -143,10 +197,11 @@ Three standing rules shape what counts as an improvement:
 
 ### 3. Isolate
 
-Create a worktree for this one finding at
+For each selected finding, create a worktree at
 `<target>/.agents/worktrees/<finding-slug>/` on a new branch
 `harness/<finding-slug>`, branched from the run's base branch (readiness step 4).
-One finding, one worktree, one branch. All fix work happens inside it.
+One finding, one worktree, one branch. All fix work happens inside its own worktree;
+a wave never shares one.
 
 Arriving here from one of `playbooks/resume.md`'s restart routes, the worktree or the
 branch — or both — may already exist while holding no work. Follow that file's
@@ -160,13 +215,20 @@ conventions (`<target>/.agents/conventions.md`). Do not refactor surrounding cod
 fix unrelated findings you notice (add them to the ledger as `open` instead), or
 change approach without recording the pivot in the ledger entry.
 
+During a wave, concurrent fix contexts do not edit the base ledger or another
+finding's worktree. Send attempt evidence and newly observed findings to the
+coordinating context, which writes every ledger transition in ranked order without
+dropping or coalescing entries.
+
 ### 5. Verify
 
 Run `playbooks/verify.md` inside the worktree. It yields **PASS**,
 **PASS (unverified-by-tests)**, or **FAIL**, backed by quoted command output — no
 completion claim without it. Both PASS forms are non-FAIL: carry on to step 6, and
-record the qualifier verbatim in the ledger `delta` so the run's evidence level is
-never overstated. On FAIL, iterate on the fix (never on the test), increment
+record the qualifier verbatim in the ledger evidence so the run's evidence level is
+never overstated. This worktree verdict is preliminary: only step 7's pinned-commit
+verification after update can authorize merge or `done`. On FAIL, iterate on the fix
+(never on the test), increment
 `attempts: <n>/3` in the ledger, and return to step 4. After 3 failed attempts, take
 the failure path below. One FAIL is not iterable: a guard-precedence FAIL, where the
 fix *is* the deletion, so retrying produces the same verdict three times — route that
@@ -183,34 +245,68 @@ diff line by line and simplify. If de-sloppifying changed anything, run verify a
 
 ### 7. Merge back
 
+Landing is one serial merge queue in ledger rank order, even when fixes ran
+concurrently. Finish steps 7–8 for one candidate before considering the next.
+
 Commit the fix on the finding's branch first — an uncommitted worktree has nothing to
-merge — with a first line beginning exactly `fix(<finding-slug>): ` and no
-Co-Authored-By line. Read step 8's docs bullet **before** making that commit: the
-`conventions.md` corrections it asks for belong in *this* commit, and by the time you
-reach step 8 this branch is merged and gone. That form is not decoration: the resume
-triage (`playbooks/resume.md`) matches it, with
-the closing `):`, to tell this pass's commit from an earlier pass's. A message without
-it leaves a resumed run unable to tell a committed fix from an untouched branch, and a
-looser form lets a sibling slug that extends this one match instead. On a resume that
-already carries its commit (the
-triage's second state), there is nothing left to commit: skip straight to the merge, and
-never manufacture an empty commit to satisfy this sentence. Then merge the branch into
-the run's base branch,
-which requires the target checked out on it (readiness step 4 guaranteed that). If the
-merge conflicts with work from an
-earlier pass, resolve it now, re-verify, then merge — never leave a finding stranded
-on its branch. Then, BEFORE deleting the worktree, update the ledger entry:
-`status: done`, final `attempts`, and `delta` with before/after evidence (e.g.
-`dup blocks 14 → 9; tests green` — quote real output, not recollection). Re-check the
-delta against the tree **as you write it**: run the grep or command that proves each
-claim in it, and count what you claim to have changed. A delta is the one line a future
-session takes on trust without re-deriving, and nothing downstream verifies it — a
-pass that fixed one of two citations and wrote "citations" plural leaves the next
-session believing the work is finished. The ledger
-must never claim less than reality: a run that dies between merge and ledger write
-would otherwise leave a landed fix marked `in-progress` with no worktree, which the
-resume triage (`playbooks/resume.md`) cannot distinguish from unstarted work. Only after the ledger
-says `done`, delete the worktree and the branch.
+update or verify immutably — with a first line beginning exactly
+`fix(<finding-slug>): ` and no Co-Authored-By line. Read step 8's docs bullet **before**
+making that commit: its `conventions.md` corrections belong in this commit. The exact
+message lets `playbooks/resume.md` distinguish this pass from an earlier or
+prefix-matching sibling. A resumed branch that already carries that commit needs no
+empty replacement commit.
+
+At the final gate the candidate must be exactly one finding commit ahead of current base.
+After rebasing, require the base-to-branch commit count to be 1. If repairs or pivots
+stacked commits, squash the local unpublished candidate into that one complete
+`fix(<finding-slug>):` commit before creating the diff artifact. This invariant makes
+the candidate commit's parent the exact verification base; no earlier fix hunk can sit
+outside the reviewed range.
+
+Immediately before its merge, update the candidate branch against the **current** base
+branch by rebasing the local, unpublished finding branch onto it. This preserves the
+required `fix(<slug>):` tip identity while making the candidate current. Then run
+`playbooks/verify.md` fresh against the resulting candidate commit and an exact VCS
+diff artifact from current base to that commit. This pinned-commit evaluator is the
+merge gate; step 5's earlier worktree verdict cannot substitute for it. Record its
+verdict, fresh command evidence, diff-review evidence, verifier identity (or the exact
+`same-context fallback` label), base, and candidate commit. Before merging, write
+those facts, `fixed-by`, and `verified-by` to the base ledger while the finding still
+reads `in-progress`; do not commit that intermediate write. If the run dies after a
+fast-forward but before `done`, resume can prove exactly what landed without trusting
+the dead context.
+
+An update conflict or a failed post-update verification evicts the finding from this
+merge queue; it never gets resolved hurriedly on the base checkout and never merges on
+an earlier PASS. Abort the incomplete update if needed, leave its branch and worktree
+intact, keep `status: in-progress`, and append evidence beginning
+`merge-queue-evicted:` that names the current base commit, root conflict or failed
+command, safe next repair, and the explicit condition for re-entering the queue. A
+post-update FAIL increments the attempts count and takes the normal failure path at 3;
+an update conflict alone does not spend a fix attempt. Commit this honest ledger state
+on base before moving to another candidate. Resume routes an eviction back to fix or
+verification, never directly to merge. A repair amends or re-squashes the existing
+local candidate; it never adds a second finding commit.
+
+Only a pinned-commit PASS form may fast-forward the branch into the run's base
+checkout, which readiness step 4 guaranteed is still checked out. If base moves again
+between the update and merge, evict and re-run this sequence; do not merge a now-stale
+candidate. BEFORE deleting the worktree, update the ledger entry with `status: done`,
+final `attempts`, and `delta` with before/after evidence (for example
+`dup blocks 14 → 9; tests green` — quote real output, not recollection). A typed entry
+is rejected as malformed without proof, and every entry newly completed by this
+playbook records it: `fixed-by: <candidate commit>`, one or more `evidence:` lines for
+the fresh commands and exact diff review, and `verified-by: <identity> @ <same
+candidate commit>`. The PASS qualifier is part of that evidence. Historical ID-less
+done entries are compatibility-valid, but that is not permission to create a new one.
+
+Re-check the delta against the merged tree **as you write it**: run the command that
+proves each claim and count what you claim to have changed. A delta is the one line a
+future session takes on trust without re-deriving; it must never claim more or less
+than reality. A run that dies between merge and ledger write would otherwise leave a
+landed fix marked `in-progress`, so write `done` before cleanup. Only after step 8 has
+checkpointed this candidate may you delete its worktree and branch and advance the
+merge queue.
 
 ### 8. Checkpoint
 
@@ -257,7 +353,8 @@ this pass wrote is left dirtying the target.
   `learnings.md` edit above.
   The fix itself is already on the base branch — step 7's merge put it there — so it
   is not part of this commit. No Co-Authored-By lines. Then confirm the target's
-  working tree is clean.
+  working tree is clean. Now delete this finding's worktree and branch. In a wave,
+  do not start the next candidate's step 7 until this checkpoint and cleanup finish.
 - Report scope remaining: findings done this run, findings still open, envelope
   budget left. On multi-hour runs, pause here for a user checkpoint between phases
   before continuing.
@@ -326,10 +423,11 @@ impossible without one — a dependency upgrade is the finding — that is
 Defaults, user-overridable at run start: **max 10 findings or 4 hours per run**,
 whichever trips first. **Context is a third dimension** with no fixed number: when
 your own working context is filling, treat that as the envelope tripping and take the
-handoff in step 8. It trips only at a pass boundary — an envelope that stops a run
-mid-fix trades one problem for a worse one. When any of them trips: finish or cleanly
-abandon the current pass
-(a half-done pass reverts its worktree and returns the entry to `open` with a note),
+handoff in step 8. It trips only at a pass boundary — in wave mode, after every
+selected member has either checkpointed or been cleanly returned to an honest state.
+An envelope that stops a run mid-fix trades one problem for a worse one. When any of
+them trips: finish or cleanly abandon the current pass or bounded wave
+(a half-done finding reverts its worktree and returns the entry to `open` with a note),
 write the ledger, report scope remaining, and stop — following the record-and-commit
 rule at the end of Hard stops, which covers this exit too. Never quietly run past the
 envelope, and never shrink the reported queue to make the run look finished.
@@ -360,6 +458,10 @@ failed run — retry before concluding anything about capability.
 
 ### Hard stops
 
+- `ledger-graph.sh` reports `INVALID`, or open findings remain and none is ready →
+  stop before mutation. Record the analyzer's root cause or the complete blocker list
+  and its safe next action; never infer missing IDs, break a cycle by ignoring an edge,
+  or audit over the blocked queue.
 - `.agents/AGENTS.md` records no test entry at all, or the recorded test command
   errors before running any test (command not found, harness crash) → stop; that is
   a seeding gap, report it. A recorded `none` or `none verified` is NOT this stop —
@@ -372,8 +474,10 @@ failed run — retry before concluding anything about capability.
   and report it — and leave the baseline worktree in place per the failure path above.
 - Verify itself is broken (the harness's gate, not the target's tests) → stop and
   report; do not self-certify fixes.
-- The run's base branch moved underneath you in ways you cannot cleanly merge
-  → stop, write the ledger, report the conflict.
+- The checked-out run base itself moved or changed identity in a way the coordinator
+  cannot reconcile → stop, write the ledger, report it. An ordinary candidate update
+  conflict is step 7's merge-queue eviction, not permission to resolve on base and not
+  automatically a run-wide stop.
 - **On any stop — the ones above and the safety envelope alike** — record the stop in
   the ledger, then commit it, then report to the user. Both halves matter:
   - **Record it** in the ledger's `Run stop` format (see

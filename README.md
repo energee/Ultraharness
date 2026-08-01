@@ -4,7 +4,7 @@ Point any coding agent at this repo to make **another** repo simpler, DRY-er, KI
 SOLID, and YAGNI — plus conditional lenses (idempotency, atomic design) that apply
 only if the repo has the thing they judge. There is no install and no runtime —
 everything here is markdown
-plus three thin bash scripts (one opt-in). The agent reads a front door, routes to a
+plus four thin bash scripts (one opt-in). The agent reads a front door, routes to a
 playbook, and does the rest.
 
 It never operates on itself unless you explicitly say so. `<target>` below is your
@@ -84,9 +84,11 @@ duplication candidates, test files — which improve runs record start → end i
 and writes findings to a scratch file you name, outside the target.
 
 **`improve.md` — the long-runtime fix loop.** Audit → pick the top finding → isolate
-in a worktree → minimal fix → verify → de-sloppify → merge → checkpoint → repeat. One
-finding, one worktree, one branch, so every failure is attributable and every fix is
-revertible. Before any of it, a clean-baseline gate: a red suite becomes finding #1
+in a worktree → minimal fix → verify → de-sloppify → merge → checkpoint → repeat.
+Serial is the default. A user may opt into a bounded graph-aware wave of independent,
+disjoint-write fixes, but every finding still has one worktree and branch, and update,
+verification, and merge are always serial. Before any of it, a clean-baseline gate: a
+red suite becomes finding #1
 and is fixed first; a repo with no suite at all makes the missing suite finding #1.
 After three failed attempts a finding is **parked** with a written ruling naming which
 gap blocked it — context, capability, authority, proof, or feedback — and what would
@@ -105,12 +107,14 @@ different questions ("should it land as written" vs "does it work as claimed").
 Deletions are read against guard precedence, so a guard removal wearing a refactor's
 clothes is a high finding with the hunk quoted.
 
-**`verify.md` — the evidence gate.** Nothing passes on memory, summaries, or a
-subagent's report. Run the commands fresh, read every hunk of the diff, then write one
-of three verdicts backed by quoted output: **PASS**, **PASS (unverified-by-tests)** —
-an honest verdict for a repo with no suite, never a softened PASS — or **FAIL**. On
-FAIL the fix iterates, never the test. Where a fresh context is available the diff goes
-to it, because whoever wrote a change is its worst reader. For a web-facing change an
+**`verify.md` — the evidence gate.** Nothing passes on memory, summaries, or an
+implementer's conversation. A distinct evaluator receives an exact VCS diff artifact,
+one-sentence claim, recorded commands, and applicable principles/lenses. It returns
+one of three verdicts backed by fresh command and diff-review evidence, verifier
+identity, and the commit tested: **PASS**, **PASS (unverified-by-tests)** — an honest
+verdict for a repo with no suite, never a softened PASS — or **FAIL**. On FAIL the fix
+iterates, never the test. Fresh context is preferred; honest `same-context fallback`
+is weaker evidence, not automatic failure. For a web-facing change an
 optional browser smoke check can add live-page facts — see "Optional browser evidence"
 below.
 
@@ -181,8 +185,10 @@ every other line left alone.
 
 The **ledger** is the loop's memory. Each finding is one entry with a status (`open`,
 `in-progress`, `done`, `parked(<gap>)`), an attempt count, and a delta quoting real
-before/after evidence. A run killed mid-finding can be resumed cold by any agent from
-the ledger alone.
+before/after evidence. Optional typed fields add stable identity, dependencies,
+read/write scope, acceptance, evaluator evidence, commits, and provenance without
+invalidating older entries. A run killed mid-finding can be resumed cold by any agent
+from the ledger alone.
 
 That is also the answer to a long run outgrowing its context. State lives in files, not
 in the session, so a handoff is one fixed line — `Read <target>/.agents/AGENTS.md and
@@ -204,6 +210,94 @@ diverges. The audit re-checks each claim against the code it cites and reports d
 alongside everything else instead of being believed. Citations are also opened as they are
 written, because the stamp catches only what *moved*: a claim that was false the day it
 was recorded would otherwise survive every drift check, forever.
+
+## Workflow graph and provenance graph
+
+The workflow graph answers “what may run now?” Optional ledger fields give findings
+stable IDs, dependencies, and declared read/write scope. The provenance graph answers
+“why does this work exist, and what proved it done?” The same entry can link its audit
+commit and governing rubric to an attempted worktree, fix commit, evaluator evidence,
+measured delta, learning, or named blocking gap. These are different views of one
+append-only record, not two stores.
+
+The seeded ledger's `Typed graph and provenance` section is the canonical field and
+path contract. `playbooks/improve.md` is the canonical execution-wave contract, and
+`playbooks/verify.md` is the canonical evaluator contract. The design rationale and
+deferred scope are in `docs/graph-model.md`; the summary here is intentionally not a
+second rulebook.
+
+Missing graph fields preserve today's serial behavior. An old actionable entry is
+valid, appears as `legacy:<slug>`, and makes the analyzer print
+`serial fallback required: yes`; no manual migration is needed. To opt an entry into
+graph scheduling, record `id`, `depends-on`, `acceptance`, and one or more repeatable
+`read-path` and `write-path` fields. Use literal `none` as the sole occurrence for a
+known-empty path set. Inspect the queue without changing it:
+
+```
+bash ~/harness/scripts/ledger-graph.sh "/path with spaces/repo/.agents/ledger.md"
+```
+
+The report lists ready and blocked findings, blockers, cycles, missing IDs, active
+write conflicts, malformed fields, and serial fallback. Invalid graph state exits
+nonzero with a root cause, safe next action, and stop condition. Conflict detection is
+write/write only: normalized equal or parent/child paths overlap; reads are review
+scope and never conflict. Bash and awk calculate these facts; no model does.
+
+Here is a complete three-finding queue. `F-A` and `F-B` are ready and may share an
+opted-in fix wave because their writes are disjoint. `F-C` waits for both:
+
+```
+## 2026-07-31 split-parser
+- finding: [solid/med] src/parser.js:12 — parser mixes tokenizing and validation
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-A
+- depends-on: none
+- read-path: src/parser.js
+- read-path: test/parser.test.js
+- write-path: src/parser.js
+- write-path: test/parser.test.js
+- acceptance: parser tests pass with tokenizing isolated
+
+## 2026-07-31 document-errors
+- finding: [teachability/low] docs/errors.md:1 — parser errors are undocumented
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-B
+- depends-on: none
+- read-path: src/errors.js
+- write-path: docs/errors.md
+- acceptance: every public parser error is documented
+
+## 2026-07-31 simplify-callers
+- finding: [kiss/med] src/cli.js:40 — callers duplicate parser error mapping
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-C
+- depends-on: F-A, F-B
+- read-path: src/parser.js
+- read-path: docs/errors.md
+- write-path: src/cli.js
+- acceptance: CLI tests pass with one error mapping path
+```
+
+For a write-conflict variant, let `F-A` declare `write-path: src` and `F-B` declare
+`write-path: src/errors.js`; the normalized parent/child sets overlap, so the analyzer
+reports that pair and they cannot share a wave. After a candidate lands, independent
+verification is recorded on its entry:
+
+```
+- evidence: `bash test.sh` exit 0 — 24 passed; diff src/base..abcdef1 read end to end
+- fixed-by: abcdef1
+- verified-by: verifier-2 @ abcdef1
+```
+
+Git plus this constrained Markdown stays the source of truth. A graph database would
+add installation, synchronization, and failure modes without improving the small
+queries the harness actually needs; Git history already supplies temporal ordering.
 
 ## Rubrics, lenses, and dimensions
 
@@ -274,6 +368,9 @@ from, and neither exists until you build it.
   the machine or changes your repo's contract with the outside world (push, PR,
   remote, published history, CI or deploy config, secrets, dependencies, deleting a
   test) without your say-so.
+- **Concurrency never expands either envelope.** Fix waves are explicit, bounded, and
+  restricted to dependency-complete disjoint writes; high-risk work stays serial and
+  every update, final verification, and merge is processed one at a time.
 - **Agent-agnostic prose.** Playbooks name actions — run, read, write — never any
   specific agent's tool names.
 
@@ -287,17 +384,19 @@ principles/               # DRY, KISS, SOLID, YAGNI, fail-fast — full-form rub
 lenses/                   # conditional rubrics, each with a Gate section
 templates/agents-dir/     # the .agents/ skeleton seed.md instantiates
 scripts/audit-checks.sh   # deterministic fact collector (git + grep + awk only)
+scripts/ledger-graph.sh   # deterministic read-only readiness/conflict analyzer
 scripts/test.sh           # bash tests for the fact collectors + rubric sync tripwire
 scripts/smoke-check.sh    # optional browser evidence — needs a user-supplied Lightpanda
 docs/ablations.md         # which instruction rules have been tested, and how
 docs/coverage.md          # hard-path rotation record + playbook prose budget
+docs/graph-model.md       # graph/provenance decisions and deliberately deferred scope
 docs/runs.md              # one line per real improve run — the field record
 ```
 
 ## Testing the harness itself
 
 Run `bash scripts/test.sh` from this repo's root — the bash tests for
-`scripts/audit-checks.sh` and `scripts/smoke-check.sh` (the browser-present
+`scripts/audit-checks.sh`, `scripts/ledger-graph.sh`, and `scripts/smoke-check.sh` (the browser-present
 assertions run only when a binary is supplied, and print `SKIP` otherwise), plus a
 sync tripwire that pins each full-form rubric to
 its condensed twin by hash: editing either fails the suite until the pair is
