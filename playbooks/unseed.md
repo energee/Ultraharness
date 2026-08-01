@@ -1,15 +1,15 @@
-# unseed.md — remove the harness footprint from a target repo
+# unseed.md — remove Ultraharness footprint from a target repo
 
 Seeding's inverse: remove `.agents/`, the pointer blocks, and the one ignore rule
-seeding added — and nothing else. The footprint rule in `<harness>/AGENTS.md` is what
-makes this well-defined: everything the harness owns in a target is enumerable, so
+seeding added — and nothing else. The footprint rule in `<ultraharness>/AGENTS.md` is what
+makes this well-defined: everything Ultraharness owns in a target is enumerable, so
 its removal is too. History survives — the seed and every checkpoint were committed,
 so unseeding removes the record from the tree, never from `git log`.
 
 ## Readiness probe
 
 1. You have a target repo path. If none was given, ask for one — never unseed the
-   harness repo itself unless explicitly told to.
+   the Ultraharness repo itself unless explicitly told to.
 2. `<target>/.agents/` exists. If it does not, report "not seeded, nothing to do"
    and stop — that is the idempotent success case, not a failure.
 3. The working tree is clean (`git -C <target> status --porcelain` empty). If dirty,
@@ -41,11 +41,12 @@ remains is untracked residue, not work.
 ### 3. Strip the pointer blocks
 
 For each of `<target>/AGENTS.md` and `<target>/CLAUDE.md` that exists and contains a
+current `<!-- ultraharness:begin -->`…`<!-- ultraharness:end -->` block or deprecated
 `<!-- harness:begin -->`…`<!-- harness:end -->` block:
 
-- If the file consists of exactly that block (surrounding blank lines aside), seeding
-  created it — delete the file.
-- Otherwise, remove only the delimited lines, the delimiters included, and leave
+- If the file consists of exactly one owned block (surrounding blank lines aside),
+  seeding created it — delete the file.
+- Otherwise, remove only the owned delimited lines, including both delimiters, and leave
   every other line exactly as it is. The content around the block is the repo's own;
   this playbook has no opinion about it.
 
@@ -62,9 +63,10 @@ costs more than an empty file does.
 ### 5. Commit
 
 Stage exactly what this playbook touched and commit with the message
-`Unseed .agents/ harness`. No Co-Authored-By line. Then confirm the removal is
+`Unseed .agents/ Ultraharness`. No Co-Authored-By line. Then confirm the removal is
 complete: `git -C <target> ls-files .agents/` prints nothing, no root file contains
-`harness:begin`, and `git -C <target> status --porcelain` is empty. Report the commit
+`ultraharness:begin` or the deprecated `harness:begin`, and
+`git -C <target> status --porcelain` is empty. Report the commit
 SHA — it is also the recovery pointer: `git revert` of this one commit is a re-seed
 with the old record intact.
 
@@ -75,10 +77,10 @@ with the old record intact.
 - **Dirty tree the user won't resolve** — stop; report what is dirty and do nothing.
 - **On any stop above** — the ledger still exists (removal has not happened at the
   probe), so append one record in the ledger's `Run stop` format (see
-  `<harness>/templates/agents-dir/ledger.md`), then report the same to the user.
+  `<ultraharness>/templates/agents-dir/ledger.md`), then report the same to the user.
 
 ## Anti-rationalization table
 
 This playbook starts with no rows. Rows enter only from an excuse a real run makes
-that no numbered step already forbids — never speculatively (`<harness>/docs/ablations.md`
+that no numbered step already forbids — never speculatively (`<ultraharness>/docs/ablations.md`
 records the rule and the evidence class removals rest on).

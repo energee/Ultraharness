@@ -24,7 +24,7 @@ playbooks already quote as fact — and so the same repo gates the same way on e
 machine. The script fires on component-UI file extensions (`.jsx`, `.tsx`, `.vue`,
 `.svelte`), or on a components directory *and* a framework import together; either half
 of that second condition alone is not enough. `.agents/` is excluded, because the
-harness's own seeded files are not the target's code.
+Ultraharness's own seeded files are not the target's code.
 
 **Applies** if the line reads `FIRED` *and* you open one cited path and confirm it is a
 real component rather than a stray `.tsx` in a scripts directory. That confirmation is

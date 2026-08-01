@@ -1,5 +1,5 @@
 ---
-description: Remove the harness footprint from a target repo (seed's inverse)
+description: Remove Ultraharness footprint from a target repo (seed's inverse)
 argument-hint: <target-path>
 ---
 

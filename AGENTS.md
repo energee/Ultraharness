@@ -1,6 +1,6 @@
 # AGENTS.md
 
-You have been pointed at the harness repo. It operates on a separate *target* repo; if
+You have been pointed at the Ultraharness repo. It operates on a separate *target* repo; if
 no target path was given, ask for one — never operate on this repo unless explicitly
 told to.
 
@@ -13,8 +13,8 @@ told to.
 | actively improve a repo over a long run | `playbooks/improve.md` |
 | judge a proposed change (diff, branch, PR) before it lands | `playbooks/review.md` |
 | prove a change is done | `playbooks/verify.md` |
-| remove the harness footprint from a repo | `playbooks/unseed.md` |
-| check this harness still works | `playbooks/self-test.md` |
+| remove Ultraharness footprint from a repo | `playbooks/unseed.md` |
+| check Ultraharness still works | `playbooks/self-test.md` |
 
 Load one playbook at a time. Playbooks reference `principles/` (universal rubrics) and
 `lenses/` (conditional rubrics, each gated on evidence in the target) just-in-time —
@@ -30,12 +30,13 @@ categories with no rubric file and no gate.
 - All findings are ranked — never report a partial list.
 - Evidence before claims: no completion claim without fresh output to back it.
 - Browser evidence is optional equipment. `scripts/smoke-check.sh` runs only with a
-  user-supplied Lightpanda binary (`LIGHTPANDA_BIN` or on PATH); the harness never
+  user-supplied Lightpanda binary (`LIGHTPANDA_BIN` or on PATH); Ultraharness never
   bundles, downloads, or requires one. A missing browser is a printed fact — never a
   finding against the target, never a blocked verdict, never an error.
-- **The harness footprint is never evidence about the target.** Everything under
-  `<target>/.agents/` and the `<!-- harness:begin -->`…`<!-- harness:end -->` blocks in
-  the target's root `AGENTS.md` / `CLAUDE.md` is your own output. Never count it, judge
+- **Ultraharness footprint is never evidence about the target.** Everything under
+  `<target>/.agents/`, the current `<!-- ultraharness:begin -->`…`<!-- ultraharness:end -->`
+  blocks, and deprecated `<!-- harness:begin -->`…`<!-- harness:end -->` blocks in the
+  target's root `AGENTS.md` / `CLAUDE.md` is your own output. Never count it, judge
   it, measure it, or let it fire a gate. In those two root files the exclusion is the
   delimited block, not the file — content the target already had is the repo's own, and
   is evidence like any other file. Playbooks state only what this means at their step;

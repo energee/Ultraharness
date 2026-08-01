@@ -1,4 +1,4 @@
-# Runs the harness's own suite (scripts/test.sh — audit-checks assertions plus the
+# Runs Ultraharness's own suite (scripts/test.sh — audit-checks assertions plus the
 # rubric sync tripwire) on every push and PR, on both Linux (GNU toolchain) and
 # macOS (BSD toolchain), the two platforms audit-checks.sh claims to support.
 name: test

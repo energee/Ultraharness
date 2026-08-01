@@ -1,9 +1,9 @@
-# self-test.md — prove this harness still works
+# self-test.md — prove Ultraharness still works
 
-You are testing the harness repo itself. Everything else here operates on a target
-repo; this playbook operates on `<harness>` — and it does so by building a throwaway
+You are testing the Ultraharness repo itself. Everything else here operates on a target
+repo; this playbook operates on `<ultraharness>` — and it does so by building a throwaway
 target from scratch, running the real playbooks against it, and asserting on what
-actually landed. `<harness>` below is this repo's root; `<fixture>` is the throwaway
+actually landed. `<ultraharness>` below is this repo's root; `<fixture>` is the throwaway
 repo you create in a temp dir.
 
 Nothing in this playbook is satisfied by reading a playbook and judging it sound.
@@ -15,27 +15,47 @@ run. A step you did not run has no result.
 Check all of these before doing anything else. If one fails, stop and report exactly
 what is missing.
 
-1. You are in the harness repo: `<harness>/AGENTS.md`, `<harness>/playbooks/`,
-   `<harness>/templates/agents-dir/`, and `<harness>/scripts/` all exist.
+1. You are in the Ultraharness repo: `<ultraharness>/AGENTS.md`, `<ultraharness>/playbooks/`,
+   `<ultraharness>/templates/agents-dir/`, and `<ultraharness>/scripts/` all exist.
 2. `git`, `bash`, and a writable temp dir are available.
-3. The fixture goes in a temp dir **outside** `<harness>` — never inside it, and
+3. The fixture goes in a temp dir **outside** `<ultraharness>` — never inside it, and
    never in a real repo of the user's. Nothing this playbook does may write to
-   `<harness>` except a fix you deliberately make in step 7 and the records steps 1,
+   `<ultraharness>` except a fix you deliberately make in step 7 and the records steps 1,
    5c, and 5f append (`docs/coverage.md`, `docs/ablations.md`).
 
 ## Workflow
 
 ### 1. Run the script tests
 
-Run `bash scripts/test.sh` from `<harness>`. Every assertion must print `PASS` and
+Run `bash scripts/test.sh` from `<ultraharness>`. Every assertion must print `PASS` and
 the run must exit 0. A single `FAIL` stops the self-test here: fix the script or the
 test, then start over from this step.
 
-Then record the prose budget: run `wc -l <harness>/playbooks/*.md` and append one
-line to the budget table in `<harness>/docs/coverage.md`. If any count grew since
+Then record the prose budget: run `wc -l <ultraharness>/playbooks/*.md` and append one
+line to the budget table in `<ultraharness>/docs/coverage.md`. If any count grew since
 the previous line, name the cause in your report — a budget nobody reads is not a
 budget, and growth with no named cause is a finding against whatever run added the
 lines.
+
+### 1a. Prove ledger graph analysis on a throwaway record
+
+Create `<graph-fixture>` in a fresh temp directory outside `<ultraharness>`, with a seeded
+ledger-shaped Markdown file containing three typed open findings: two with
+`depends-on: none` and disjoint writes, and a third depending on both. Put a space in
+the fixture path and a comma in at least one declared path. Run
+`bash <ultraharness>/scripts/ledger-graph.sh <graph-fixture>/ledger.md` and assert:
+
+- exit 0, `serial fallback required: no`, both independent IDs under `ready
+  findings`, and the dependent under `blocked findings` naming both open blockers;
+- no cycle, missing ID, write conflict, or malformed field; and
+- the ledger's `git hash-object` value is identical before and after analysis.
+
+Run it again under `LC_ALL=C` and the advertised `en_US.UTF-8` / `en_US.utf8` locale
+when available, requiring byte-identical output and exit status. Then change only the
+scratch record so the two ready findings have parent/child writes, confirm the report
+names their active conflict, and delete `<graph-fixture>`. This is deterministic
+analysis evidence, not authorization for concurrent mutation; improve's wave contract
+remains a separate policy.
 
 ### 2. Build the fixture repo
 
@@ -83,7 +103,7 @@ verifying the test command by running it. Then assert the exact footprint:
   Grep a phrase the *seeded* file contains. `condensed lens` is line 1 of both files in
   `templates/agents-dir/lenses/`, which are the only lens files seeding ever copies. An
   earlier version grepped `Gate — does this lens apply`, which appears solely in the
-  full-form lenses under `<harness>/lenses/` — so it matched nothing even when a lens
+  full-form lenses under `<ultraharness>/lenses/` — so it matched nothing even when a lens
   *had* leaked, and would have passed on the very defect it was written to catch. Check a
   new assertion against the artifact it inspects, not against the file you happened to be
   reading when you wrote it.
@@ -106,7 +126,7 @@ verifying the test command by running it. Then assert the exact footprint:
   all five files. Porcelain alone cannot catch this — a `.gitignore` covering
   `.agents/` makes `git add` skip it silently and porcelain never mentions ignored
   files, so both weaker assertions below would pass on a seed that committed nothing.
-- A commit `Seed .agents/ harness` exists in the fixture's log, and
+- A commit `Seed .agents/ Ultraharness` exists in the fixture's log, and
   `git -C <fixture> status --porcelain` shows nothing seeded left unstaged.
 
 Any assertion that fails is a defect in `seed.md`, not in your run of it.
@@ -117,14 +137,14 @@ Run `playbooks/seed.md` against `<fixture>` a second time, unchanged. Seeding is
 update path, so a second run on an unchanged repo must be a no-op that says so.
 Assert:
 
-- The pointer blocks did not double: counting `harness:begin` in both
+- The pointer blocks did not double: counting `ultraharness:begin` in both
   `<fixture>/AGENTS.md` and `<fixture>/CLAUDE.md` gives 1 each.
 - `.gitignore` gained no duplicate line.
 - The tree is strictly clean: `git -C <fixture> status --porcelain` prints nothing.
   Nothing changed between the two runs, so there is nothing a refresh could
   legitimately be refreshing — any diff means the first run left something stale,
   which is itself a defect to fix in step 7.
-- No new commit: the fixture's commit count is unchanged and `Seed .agents/ harness`
+- No new commit: the fixture's commit count is unchanged and `Seed .agents/ Ultraharness`
   appears exactly once in the log. The re-seed's `git commit` exits nonzero with
   "nothing to commit"; the run must report that as "already current, no commit", not
   as a failed seed and not by forcing an empty commit.
@@ -149,7 +169,7 @@ Read `playbooks/audit.md` and run it against `<fixture>`, as written. Assert:
   separator**: `ledger.md` documents its own entry format using the same syntax it
   stores entries in, so a naive `grep -c '^- finding: \['` over the whole file counts
   the documentation as a fifth finding and every count assertion reads one high.
-- No finding covers the harness's own footprint — `.agents/` and the pointer blocks
+- No finding covers Ultraharness's own footprint — `.agents/` and the pointer blocks
   are quoted in the script report but never judged.
 
 ### 5a. Prove the gates gate
@@ -172,7 +192,7 @@ Commit it. Run `playbooks/seed.md` against it as written, then assert:
   correctly" — the seeded footprint below is only trustworthy if it traces to this line.
 
 - `<fixture2>/.agents/lenses/idempotency.md` exists and is byte-identical to
-  `<harness>/templates/agents-dir/lenses/idempotency.md`.
+  `<ultraharness>/templates/agents-dir/lenses/idempotency.md`.
 - `<fixture2>/.agents/lenses/atomic-design.md` does **not** exist. This is the
   assertion that makes the others mean something: the same run that copied one lens
   withheld the other, on the same repo, from its gate alone.
@@ -215,32 +235,39 @@ Then run `playbooks/improve.md` against it with the safety envelope overridden t
   anything, and the ledger's `Run state` block records `- base branch: <the branch the
   fixture had checked out>` — not `main` unless that is what was checked out.
 - **Isolation**: a worktree exists at `<fixture3>/.agents/worktrees/<slug>/` on branch
-  `harness/<slug>`, cut from the base branch, while the pass is in flight, and the
+  `ultraharness/<slug>`, cut from the base branch, while the pass is in flight, and the
   entry reads `status: in-progress` before any fix is written.
 - **Verify ran for real**: the pass's verdict is one of the three verdicts, and it
   quotes fresh command output. A verdict with no quoted output is a defect in
   `verify.md`, not a formatting nit.
+- **Pinned evaluator ran after update**: after the `fix(<slug>):` commit exists and
+  immediately before merge, the evaluator record names that exact commit, current
+  base and exact diff artifact, verifier identity or `same-context fallback`, fresh
+  command summaries, full diff-review evidence, and applicable principle/lens files.
+  Its verdict is a PASS form; a worktree-only record cannot satisfy this assertion.
 - **Merge back**: the base branch carries a commit whose first line begins exactly
   `fix(<slug>): `, with no Co-Authored-By line, and the fix is present in the
   fixture's working tree.
 - **Ledger before deletion**: the entry reads `status: done` with a `delta` quoting
-  real before/after evidence, and only then are the worktree and branch gone —
+  real before/after evidence, `fixed-by` naming the candidate, repeatable `evidence`
+  covering commands and diff review, and `verified-by` binding identity to that same
+  commit. Only then are the worktree and branch gone —
   `git -C <fixture3> worktree list` shows one entry and `git -C <fixture3> branch
-  --list 'harness/*'` is empty.
+  --list 'ultraharness/*'` is empty.
 - **Checkpoint**: `git -C <fixture3> status --porcelain` is empty — the ledger update
   is committed, not left dirtying the target.
 
 Assert the negative too, the way step 5a does: the run stopped after one finding
 because the envelope said 1, reported scope remaining, and left the still-`open`
 entries open. An envelope that never stops a run is not an envelope. And assert the
-run-log exclusion: `<harness>/docs/runs.md` gained no line from this run — fixtures
+run-log exclusion: `<ultraharness>/docs/runs.md` gained no line from this run — fixtures
 are not runs, per improve.md's Run log rule.
 
 ### 5c. Ablate one anti-rationalization row
 
 The playbooks' anti-rationalization tables hold only rows whose action the workflow
 body does not already mandate. The 2026-07-26 class removal (recorded in
-`<harness>/docs/ablations.md`) deleted every restating row: three independent fresh
+`<ultraharness>/docs/ablations.md`) deleted every restating row: three independent fresh
 contexts, each given a playbook with a restatement row removed, declined the excuse
 anyway and cited the body — never the table. Each row still claims an agent would
 otherwise make its excuse, and an unfalsified claim is decoration: this step tests
@@ -254,7 +281,7 @@ prose. If no fresh context is available, skip this step and say so in the report
 self-ablation reported as a result is worse than no result.
 
 Pick one row — rotate through them across runs, oldest-untested first, reading
-`<harness>/docs/ablations.md` to see which have been tested and when. That file is the
+`<ultraharness>/docs/ablations.md` to see which have been tested and when. That file is the
 record; without it "oldest-untested" is unanswerable and every run re-tests whatever
 row catches your eye. Then:
 
@@ -277,7 +304,7 @@ Then judge:
   observation about a real run, so step 7 applies: fix the smallest thing that
   explains it, and consider whether that failure deserves a row.
 
-Append the result as one row in `<harness>/docs/ablations.md`, and report it. It does
+Append the result as one row in `<ultraharness>/docs/ablations.md`, and report it. It does
 not go into the target, and it does not go into the playbook — except the row edit
 itself, once two runs justify one. New rows enter the same way removals leave:
 by observation. A row goes in when a real run actually made its excuse — never
@@ -352,7 +379,7 @@ which nothing else here covers.
 Steps 3-5e exercise the paths a healthy run takes. The paths below are where an
 unattended run does damage, and covering all of them every run would double the
 self-test — so run exactly **one** per self-test: read the rotation record in
-`<harness>/docs/coverage.md`, take the oldest-untested, run its recipe, and append
+`<ultraharness>/docs/coverage.md`, take the oldest-untested, run its recipe, and append
 the result there.
 
 Manufactured state is legitimate here, and it is what makes these cheap: the ledger
@@ -394,7 +421,7 @@ deterministically.
   and nothing was written into the target — findings in the report only, no ledger
   entry.
 
-A failed assertion here is a defect in a harness file, exactly as in step 7 — fix the
+A failed assertion here is a defect in an Ultraharness file, exactly as in step 7 — fix the
 smallest thing that explains it and re-run the path. Delete these fixtures with the
 rest (step 6).
 
@@ -402,8 +429,8 @@ rest (step 6).
 
 First run `playbooks/unseed.md` against `<fixture>`, as written, and assert the
 footprint is gone the way step 3 asserted it arrived: `git -C <fixture> ls-files
-.agents/` prints nothing, no root file contains `harness:begin`, `.gitignore` carries
-no `.agents/worktrees/` line, a commit `Unseed .agents/ harness` exists, and the tree
+.agents/` prints nothing, no root file contains `ultraharness:begin`, `.gitignore` carries
+no `.agents/worktrees/` line, a commit `Unseed .agents/ Ultraharness` exists, and the tree
 is clean. Seeding's inverse is a destructive path, which is exactly why it runs here,
 against a fixture, every time — a deletion playbook proven only by reading it would
 be proven on a real repo eventually.
@@ -411,11 +438,11 @@ be proven on a real repo eventually.
 Then remove every temp dir this run created — `<fixture>`, `<fixture2>`, and `<fixture3>`.
 Leaving one behind means the next self-test silently runs against a pre-seeded repo and
 stops testing the seed path at all. `<fixture3>` also carries git worktrees and
-`harness/*` branches from step 5b; deleting its directory takes those with it.
+`ultraharness/*` branches from step 5b; deleting its directory takes those with it.
 
 ### 7. Fix what the run broke
 
-Every failed assertion above is a defect in a harness file — the playbook, the
+Every failed assertion above is a defect in an Ultraharness file — the playbook, the
 template, or the script — never in the fixture and never in your reading. Fix the
 smallest thing that explains the observed failure, then re-run this playbook from the
 step that failed. A fix must be traceable to something you watched happen; if you
@@ -437,20 +464,23 @@ This playbook exercises `seed.md`, `audit.md`, and `unseed.md` end to end, **one
 pass of `improve.md`/`verify.md` (step 5b), and the clean handoff (step 5e), against
 real fixtures. The hard paths — park and the parked-baseline hard stop, the testless
 verify route, the authority envelope, the mid-pass resume, the review guard-removal
-read — are covered one per run by step 5f's rotation: `<harness>/docs/coverage.md`
+read — are covered one per run by step 5f's rotation: `<ultraharness>/docs/coverage.md`
 is the record of which have actually run and when, and a path with no row there is
 unproven, whatever this section says. `review.md` outside that one path has no
 fixture yet.
 
-Still uncovered by anything: runs longer than two passes. A green self-test says a
-single pass works end to end; it says nothing about the loop across passes.
+Still uncovered by anything: runs longer than two passes and actual concurrent fix
+execution. Step 1a and `scripts/test.sh` prove deterministic wave inputs, and step 5b
+proves the serial landing gate for one finding; neither launches parallel mutation.
+A green self-test therefore says nothing about multi-pass or concurrent-worker
+orchestration.
 
 Step 5c tests exactly **one** remaining anti-rationalization row per run, and only
 when a fresh context is available. Every untested row is an unfalsified claim.
 
 ## Stop conditions
 
-- **`scripts/test.sh` fails**: stop at step 1. A red script harness makes every fact
+- **`scripts/test.sh` fails**: stop at step 1. A red script suite makes every fact
   downstream untrustworthy — there is nothing to learn from continuing.
 - **The same assertion fails 3 times**: stop fixing. Report the assertion, the three
   attempted fixes, and the output each time. A fourth attempt on the same theory is
@@ -462,12 +492,12 @@ when a fresh context is available. Every untested row is an unfalsified claim.
   back to seeding a real repo to keep the self-test moving. The same holds for
   `<fixture2>` at step 5a.
 - **On any stop above** — record what stopped the self-test and what would unblock
-  it in the ledger's `Run stop` format (see `<harness>/templates/agents-dir/ledger.md`): in
+  it in the ledger's `Run stop` format (see `<ultraharness>/templates/agents-dir/ledger.md`): in
   `<fixture>/.agents/ledger.md` if the fixture got far enough to have one, otherwise
   in the report to the user. Delete the fixture either way (step 6).
 
 ## Anti-rationalization table
 
 Every row this playbook carried restated a numbered step, and the restatement class
-was removed 2026-07-26 on ablation evidence — see `<harness>/docs/ablations.md`. A
+was removed 2026-07-26 on ablation evidence — see `<ultraharness>/docs/ablations.md`. A
 row goes in only when a real run makes an excuse no numbered step already forbids.

@@ -2,7 +2,7 @@
 # smoke-check.sh — optional browser evidence collector for playbooks/verify.md.
 # Prints FACTS about one live page (never judgments); verify quotes them under a
 # `smoke:` label. The browser is user-supplied equipment: $LIGHTPANDA_BIN or a
-# `lightpanda` on PATH. This harness never bundles or downloads one — a missing
+# `lightpanda` on PATH. This Ultraharness never bundles or downloads one — a missing
 # browser is a printed fact and exit 3, never an error (the rule lives in AGENTS.md).
 # Usage: smoke-check.sh <url> [--expect <string>]
 # Exit: 0 facts collected; 2 usage; 3 browser unavailable; 4 fetch failed;

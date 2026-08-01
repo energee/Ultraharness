@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# test.sh — bash test harness for scripts/audit-checks.sh and scripts/smoke-check.sh,
-# plus the rubric sync tripwire pinning full-form rubrics to their condensed twins.
+# test.sh — bash test suite for scripts/audit-checks.sh,
+# scripts/ledger-graph.sh, and scripts/smoke-check.sh, plus the rubric sync
+# tripwire pinning full-form rubrics to their condensed twins.
 # Builds a throwaway fixture repo in a temp dir, runs audit-checks.sh against it,
 # and asserts on the printed facts with grep. Prints PASS/FAIL per assertion and
 # exits nonzero if any assertion fails. No dependencies beyond git + coreutils.
@@ -8,6 +9,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AUDIT="$SCRIPT_DIR/audit-checks.sh"
+GRAPH="$SCRIPT_DIR/ledger-graph.sh"
 
 FAILS=0
 pass() { printf 'PASS: %s\n' "$1"; }
@@ -52,18 +54,506 @@ check_sync principles/solid.md      1c29917458db8535e91a311aed23d99b9871a56c8753
 check_sync principles/yagni.md      c724c113841a6cf80ee892eb8cc9df6986ba267fbcbf9fdb55b434f7814d77f9
 check_sync principles/fail-fast.md  38b1e68fa1d765accf3de14ce531b0ea738be8fd8dcf31aa81ae1381feb2770b
 check_sync lenses/a11y.md           8488cde111a0bb622369b32eb7f2b2effd47e30e6a6e4a259959c4f5bcf72091
-check_sync lenses/atomic-design.md  033a38bfb0b266577cf2cf30fc33b2c13a283f1c25ece79ce135d6c5e6f8451f
-check_sync lenses/idempotency.md    f6cc63250e4ab2e5c9fb9d21ae4e1a9bc1c1800b4697c5df13d9022c80223948
-check_sync lenses/security-boundary.md  b978e51f5166f1ff0aff924c1f29112d7144ec992f2cb0842832b4f0cce7ae37
+check_sync lenses/atomic-design.md  393a6fcdaab01690ddb82b5866481fe396253191a1667e7a8f86ace299573cf2
+check_sync lenses/idempotency.md    61a01176cf0d5cb30ea7de4e10219c7cb27d223ce736c36a35618818e2c1a456
+check_sync lenses/security-boundary.md  52f201a89f345a7b26931346c78b10fff9789529cecaa3dad550786d7f01042d
 check_sync templates/agents-dir/principles.md            e5777b57c21c05d0aa55a62c16a1f4f4a7fb6160c7672e0956325e54102980d8
 check_sync templates/agents-dir/lenses/a11y.md           58767016c3c2de6ddc9097167611108b2b61d2e7b020a50437086d6a14271189
 check_sync templates/agents-dir/lenses/atomic-design.md  40f7e65a40d11872f0e599c638c84556dad1f2510690daa3503e6ae87c80f686
 check_sync templates/agents-dir/lenses/idempotency.md    23b55a5b1c6b1fe94825816dc1541a16057d63ad4765ef7670e2f264e2647e68
 check_sync templates/agents-dir/lenses/security-boundary.md  c6126465c617e589ddfa885416386e01fcc1c35c1e62040d9bb0c2020db042a6
 
+# --- Ultraharness branding and protocol namespace ---
+assert_grep "branding: README uses Ultraharness name" \
+  "^# Ultraharness$" "$REPO_ROOT/README.md"
+assert_grep "branding: seed writes Ultraharness pointer marker" \
+  "<!-- ultraharness:begin -->" "$REPO_ROOT/playbooks/seed.md"
+assert_grep "branding: improve writes Ultraharness branch namespace" \
+  "ultraharness/<finding-slug>" "$REPO_ROOT/playbooks/improve.md"
+assert_grep "branding: seed uses Ultraharness commit identity" \
+  "Seed \.agents/ Ultraharness" "$REPO_ROOT/playbooks/seed.md"
+assert_grep "branding: seed migrates the deprecated pointer marker" \
+  "Treat the deprecated" "$REPO_ROOT/playbooks/seed.md"
+assert_grep "branding: resume recognizes the deprecated branch namespace" \
+  "or the deprecated" "$REPO_ROOT/playbooks/resume.md"
+
 # --- fixture repo ---
 FIXTURE="$(mktemp -d)"
 trap 'kill "$(cat "$FIXTURE.web/pid" 2>/dev/null)" 2>/dev/null || true; rm -rf "$FIXTURE" "$FIXTURE".out* "$FIXTURE".ui "$FIXTURE".web' EXIT
+
+# --- ledger graph readiness ---
+# Keep these as literal seeded-ledger fixtures rather than generating fields in a
+# loop: the parser contract is the Markdown humans edit, including spaces and the
+# documentation/entry `---` boundary.
+GRAPH_DIR="$FIXTURE/graph cases"
+mkdir -p "$GRAPH_DIR"
+
+run_graph_case() {
+  # run_graph_case <description> <ledger> <expected-exit> <output>
+  local description="$1" ledger="$2" expected="$3" output="$4" actual
+  set +e
+  bash "$GRAPH" "$ledger" > "$output" 2>&1
+  actual=$?
+  set -e
+  if [ "$actual" -eq "$expected" ]; then
+    pass "$description"
+  else
+    fail "$description (expected exit $expected, got $actual; $(tail -3 "$output" | tr '\n' ' '))"
+  fi
+}
+
+OUT_GRAPH_NOFILE="$GRAPH_DIR/no-file.out"
+run_graph_case "graph: nonexistent ledger exits 2" \
+  "$GRAPH_DIR/does not exist.md" 2 "$OUT_GRAPH_NOFILE"
+assert_grep "graph: path error gives root cause" "^root cause:" "$OUT_GRAPH_NOFILE"
+assert_grep "graph: path error gives safe next action" "^safe next action:" "$OUT_GRAPH_NOFILE"
+assert_grep "graph: path error gives stop condition" "^stop condition:" "$OUT_GRAPH_NOFILE"
+
+LEGACY_LEDGER="$GRAPH_DIR/legacy ledger.md"
+cat > "$LEGACY_LEDGER" <<'EOF'
+# Ledger
+---
+## 2026-07-01 legacy-open
+- finding: [dry/med] src/old.js:1 — old format remains valid
+- status: open
+- attempts: 0/3
+- delta: pending
+
+## 2026-07-01 legacy-done
+- finding: [kiss/low] src/done.js:1 — historical done entry has no graph evidence
+- status: done
+- attempts: 1/3
+- delta: tests green
+EOF
+OUT_GRAPH_LEGACY="$GRAPH_DIR/legacy.out"
+run_graph_case "graph: legacy ledger exits 0" "$LEGACY_LEDGER" 0 "$OUT_GRAPH_LEGACY"
+assert_grep "graph: legacy ledger requires serial fallback" \
+  "^serial fallback required: yes$" "$OUT_GRAPH_LEGACY"
+assert_grep "graph: legacy open finding is reported ready in serial order" \
+  "^  legacy:legacy-open (open)$" "$OUT_GRAPH_LEGACY"
+assert_grep "graph: legacy done without evidence is compatibility-valid" \
+  "^malformed graph fields:$" "$OUT_GRAPH_LEGACY"
+assert_not_grep "graph: legacy done is not rejected for missing evidence" \
+  "typed done finding requires" "$OUT_GRAPH_LEGACY"
+
+INDEPENDENT_LEDGER="$GRAPH_DIR/independent.md"
+cat > "$INDEPENDENT_LEDGER" <<'EOF'
+# Ledger
+---
+## 2026-07-02 first
+- finding: [dry/med] src/a.js:1 — first independent finding
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-A
+- depends-on: none
+- read-path: src/input a.txt
+- write-path: src/a.js
+- acceptance: first behavior is covered
+
+## 2026-07-02 second
+- finding: [kiss/med] src/b.js:1 — second independent finding
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-B
+- depends-on: none
+- read-path: src/input b.txt
+- write-path: src/b.js
+- acceptance: second behavior is covered
+EOF
+OUT_GRAPH_INDEPENDENT="$GRAPH_DIR/independent.out"
+run_graph_case "graph: two independent findings exit 0" "$INDEPENDENT_LEDGER" 0 "$OUT_GRAPH_INDEPENDENT"
+assert_grep "graph: fully typed queue does not require serial fallback" \
+  "^serial fallback required: no$" "$OUT_GRAPH_INDEPENDENT"
+assert_grep "graph: first independent finding ready" "^  F-A (first; open)$" "$OUT_GRAPH_INDEPENDENT"
+assert_grep "graph: second independent finding ready" "^  F-B (second; open)$" "$OUT_GRAPH_INDEPENDENT"
+assert_grep "graph: zero-valued summary counters print deterministically as zero" \
+  "^summary: ready=2 blocked=0 cycles=0 missing=0 conflicts=0 malformed=0$" "$OUT_GRAPH_INDEPENDENT"
+
+UNLOCKED_LEDGER="$GRAPH_DIR/unlocked.md"
+cat > "$UNLOCKED_LEDGER" <<'EOF'
+# Ledger
+---
+## 2026-07-03 prerequisite
+- finding: [testing/high] test.sh:1 — prerequisite
+- status: done
+- attempts: 1/3
+- delta: suite red -> green
+- id: F-BASE
+- depends-on: none
+- read-path: test.sh
+- write-path: src/base.js
+- acceptance: suite passes
+- evidence: `bash test.sh` exit 0 at abcdef1
+- fixed-by: abcdef1
+- verified-by: verifier-one @ abcdef1
+
+## 2026-07-03 dependent
+- finding: [solid/med] src/dependent.js:1 — unlocked work
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-DEP
+- depends-on: F-BASE
+- read-path: src/base.js
+- write-path: src/dependent.js
+- acceptance: dependent behavior passes
+EOF
+OUT_GRAPH_UNLOCKED="$GRAPH_DIR/unlocked.out"
+run_graph_case "graph: completed dependency fixture exits 0" "$UNLOCKED_LEDGER" 0 "$OUT_GRAPH_UNLOCKED"
+assert_grep "graph: completed dependency unlocks dependent" \
+  "^  F-DEP (dependent; open)$" "$OUT_GRAPH_UNLOCKED"
+assert_grep "graph: completed dependency creates no blocker" \
+  "^blocked findings:$" "$OUT_GRAPH_UNLOCKED"
+
+UNFINISHED_LEDGER="$GRAPH_DIR/unfinished.md"
+sed 's/- status: done/- status: open/' "$UNLOCKED_LEDGER" > "$UNFINISHED_LEDGER"
+OUT_GRAPH_UNFINISHED="$GRAPH_DIR/unfinished.out"
+run_graph_case "graph: unfinished dependency fixture exits 0" "$UNFINISHED_LEDGER" 0 "$OUT_GRAPH_UNFINISHED"
+assert_grep "graph: unfinished dependency blocks dependent" \
+  "^  F-DEP (dependent; open) <- F-BASE (open)$" "$OUT_GRAPH_UNFINISHED"
+
+PARKED_LEDGER="$GRAPH_DIR/parked.md"
+sed 's/- status: done/- status: parked(proof)/' "$UNLOCKED_LEDGER" > "$PARKED_LEDGER"
+OUT_GRAPH_PARKED="$GRAPH_DIR/parked.out"
+run_graph_case "graph: parked dependency fixture exits 0" "$PARKED_LEDGER" 0 "$OUT_GRAPH_PARKED"
+assert_grep "graph: parked dependency blocks dependent" \
+  "^  F-DEP (dependent; open) <- F-BASE (parked(proof))$" "$OUT_GRAPH_PARKED"
+
+MISSING_LEDGER="$GRAPH_DIR/missing.md"
+sed 's/- depends-on: F-BASE/- depends-on: F-NOT-THERE/' "$UNLOCKED_LEDGER" > "$MISSING_LEDGER"
+OUT_GRAPH_MISSING="$GRAPH_DIR/missing.out"
+run_graph_case "graph: missing dependency exits nonzero" "$MISSING_LEDGER" 1 "$OUT_GRAPH_MISSING"
+assert_grep "graph: missing dependency ID named" \
+  "^  F-NOT-THERE <- F-DEP (dependent)$" "$OUT_GRAPH_MISSING"
+assert_grep "graph: invalid report gives numeric root cause" \
+  "^root cause: malformed=0, cycles=0, missing-dependencies=1$" "$OUT_GRAPH_MISSING"
+assert_grep "graph: invalid report gives safe next action" "^safe next action:" "$OUT_GRAPH_MISSING"
+assert_grep "graph: invalid report gives stop condition" "^stop condition:" "$OUT_GRAPH_MISSING"
+
+DIRECT_CYCLE_LEDGER="$GRAPH_DIR/direct cycle.md"
+sed 's/- depends-on: F-BASE/- depends-on: F-DEP/' "$UNLOCKED_LEDGER" > "$DIRECT_CYCLE_LEDGER"
+OUT_GRAPH_DIRECT="$GRAPH_DIR/direct-cycle.out"
+run_graph_case "graph: direct cycle exits nonzero" "$DIRECT_CYCLE_LEDGER" 1 "$OUT_GRAPH_DIRECT"
+assert_grep "graph: direct cycle reported" "^  F-DEP -> F-DEP$" "$OUT_GRAPH_DIRECT"
+
+MULTI_CYCLE_LEDGER="$GRAPH_DIR/multi-cycle.md"
+cat > "$MULTI_CYCLE_LEDGER" <<'EOF'
+# Ledger
+---
+## 2026-07-04 alpha
+- finding: [dry/med] a:1 — alpha
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-A
+- depends-on: F-B
+- read-path: none
+- write-path: a
+- acceptance: alpha passes
+## 2026-07-04 beta
+- finding: [dry/med] b:1 — beta
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-B
+- depends-on: F-C
+- read-path: none
+- write-path: b
+- acceptance: beta passes
+## 2026-07-04 gamma
+- finding: [dry/med] c:1 — gamma
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-C
+- depends-on: F-A
+- read-path: none
+- write-path: c
+- acceptance: gamma passes
+EOF
+OUT_GRAPH_MULTI="$GRAPH_DIR/multi-cycle.out"
+run_graph_case "graph: multi-node cycle exits nonzero" "$MULTI_CYCLE_LEDGER" 1 "$OUT_GRAPH_MULTI"
+assert_grep "graph: multi-node cycle reported deterministically" \
+  "^  F-A -> F-B -> F-C -> F-A$" "$OUT_GRAPH_MULTI"
+
+CONFLICT_LEDGER="$GRAPH_DIR/write conflicts.md"
+cat > "$CONFLICT_LEDGER" <<'EOF'
+# Ledger
+---
+## 2026-07-05 exact-one
+- finding: [dry/med] src/shared.js:1 — exact one
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-EXACT-1
+- depends-on: none
+- read-path: docs/shared.md
+- write-path: .//src///shared.js
+- acceptance: exact one passes
+## 2026-07-05 exact-two
+- finding: [dry/med] src/shared.js:2 — exact two
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-EXACT-2
+- depends-on: none
+- read-path: docs/shared.md
+- write-path: src/shared.js
+- acceptance: exact two passes
+## 2026-07-05 parent
+- finding: [kiss/med] config:1 — parent
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-PARENT
+- depends-on: none
+- read-path: src/read-only.js
+- write-path: config
+- acceptance: parent passes
+## 2026-07-05 child
+- finding: [kiss/med] config/app.yml:1 — child
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-CHILD
+- depends-on: none
+- read-path: config
+- write-path: config/app.yml
+- acceptance: child passes
+## 2026-07-05 read-write-one
+- finding: [solid/low] src/reader.js:1 — reads another write
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-RW-1
+- depends-on: none
+- read-path: src/generated.js
+- write-path: src/reader.js
+- acceptance: reader passes
+## 2026-07-05 read-write-two
+- finding: [solid/low] src/generated.js:1 — writes another read
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-RW-2
+- depends-on: none
+- read-path: src/reader.js
+- write-path: src/generated.js
+- acceptance: generated output passes
+## 2026-07-05 spaced-one
+- finding: [dry/low] dir with space/file.js:1 — spaced path one
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-SPACE-1
+- depends-on: none
+- read-path: none
+- write-path: dir with space/file.js
+- acceptance: spaced one passes
+## 2026-07-05 spaced-two
+- finding: [dry/low] dir with space/file.js:2 — spaced path two
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-SPACE-2
+- depends-on: none
+- read-path: none
+- write-path: ./dir with space//file.js
+- acceptance: spaced two passes
+## 2026-07-05 comma-one
+- finding: [dry/low] dir/a,b.js:1 — comma path one
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-COMMA-1
+- depends-on: none
+- read-path: none
+- write-path: dir/a,b.js
+- acceptance: comma path one passes
+## 2026-07-05 comma-two
+- finding: [dry/low] dir/a,b.js:2 — comma path two
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-COMMA-2
+- depends-on: none
+- read-path: none
+- write-path: ./dir//a,b.js
+- acceptance: comma path two passes
+EOF
+OUT_GRAPH_CONFLICT="$GRAPH_DIR/write-conflicts.out"
+run_graph_case "graph: write conflict fixture exits 0" "$CONFLICT_LEDGER" 0 "$OUT_GRAPH_CONFLICT"
+assert_grep "graph: identical normalized write paths conflict" \
+  "^  F-EXACT-1 <-> F-EXACT-2: src/shared.js$" "$OUT_GRAPH_CONFLICT"
+assert_grep "graph: parent and child write paths conflict" \
+  "^  F-PARENT <-> F-CHILD: config <-> config/app.yml$" "$OUT_GRAPH_CONFLICT"
+assert_grep "graph: paths containing spaces are preserved" \
+  "^  F-SPACE-1 <-> F-SPACE-2: dir with space/file.js$" "$OUT_GRAPH_CONFLICT"
+assert_grep "graph: paths containing commas are preserved atomically" \
+  "^  F-COMMA-1 <-> F-COMMA-2: dir/a,b.js$" "$OUT_GRAPH_CONFLICT"
+assert_grep "graph: only the four write/write overlaps conflict" \
+  "conflicts=4" "$OUT_GRAPH_CONFLICT"
+assert_not_grep "graph: read/read overlap does not conflict" \
+  "F-EXACT-1 <-> F-PARENT" "$OUT_GRAPH_CONFLICT"
+assert_not_grep "graph: read/write overlap does not conflict" \
+  "F-RW-1 <-> F-RW-2" "$OUT_GRAPH_CONFLICT"
+
+RESERVED_ID_LEDGER="$GRAPH_DIR/reserved-id.md"
+cat > "$RESERVED_ID_LEDGER" <<'EOF'
+# Ledger
+---
+## 2026-07-05 reserved
+- finding: [kiss/med] src/reserved.js:1 — reserved empty-set token used as an ID
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: none
+- depends-on: none
+- read-path: none
+- write-path: src/reserved.js
+- acceptance: reserved ID is rejected
+EOF
+OUT_GRAPH_RESERVED_ID="$GRAPH_DIR/reserved-id.out"
+run_graph_case "graph: reserved none ID exits nonzero" \
+  "$RESERVED_ID_LEDGER" 1 "$OUT_GRAPH_RESERVED_ID"
+assert_grep "graph: reserved none ID gives the ambiguity cause" \
+  "id 'none' is reserved for empty lists" "$OUT_GRAPH_RESERVED_ID"
+
+MALFORMED_LEDGER="$GRAPH_DIR/malformed.md"
+cat > "$MALFORMED_LEDGER" <<'EOF'
+# Ledger
+---
+## 2026-07-06 malformed
+- finding: [dry/med] src/a.js:1 — malformed fields
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-BAD
+- depends-on: F-A,,F-B
+- read-path: none
+- read-path: src/a.js
+- write-path: /absolute/path
+- write-path: src/a.js
+- write-path: ./src//a.js
+- acceptance: malformed must fail
+EOF
+OUT_GRAPH_MALFORMED="$GRAPH_DIR/malformed.out"
+run_graph_case "graph: malformed graph fields exit nonzero" "$MALFORMED_LEDGER" 1 "$OUT_GRAPH_MALFORMED"
+assert_grep "graph: malformed dependency list gives field cause" \
+  "depends-on contains an empty list member" "$OUT_GRAPH_MALFORMED"
+assert_grep "graph: malformed write path gives field cause" \
+  "write-path path '/absolute/path' is not repository-relative" "$OUT_GRAPH_MALFORMED"
+assert_grep "graph: none cannot mix with atomic paths" \
+  "read-path mixes none with paths" "$OUT_GRAPH_MALFORMED"
+assert_grep "graph: repeated normalized atomic path is rejected" \
+  "write-path repeats normalized path 'src/a.js'" "$OUT_GRAPH_MALFORMED"
+
+DEPRECATED_PATHS_LEDGER="$GRAPH_DIR/deprecated-paths.md"
+cat > "$DEPRECATED_PATHS_LEDGER" <<'EOF'
+# Ledger
+---
+## 2026-07-06 deprecated-paths
+- finding: [kiss/low] src/a.js:1 — removed CSV path fields
+- status: open
+- attempts: 0/3
+- delta: pending
+- id: F-DEPRECATED
+- depends-on: none
+- reads: src/a.js
+- writes: src/a.js
+- acceptance: deprecated path fields fail clearly
+EOF
+OUT_GRAPH_DEPRECATED_PATHS="$GRAPH_DIR/deprecated-paths.out"
+run_graph_case "graph: deprecated CSV path fields exit nonzero" \
+  "$DEPRECATED_PATHS_LEDGER" 1 "$OUT_GRAPH_DEPRECATED_PATHS"
+assert_grep "graph: deprecated reads field names atomic replacement" \
+  "deprecated graph field reads; use repeatable read-path" "$OUT_GRAPH_DEPRECATED_PATHS"
+assert_grep "graph: deprecated writes field names atomic replacement" \
+  "deprecated graph field writes; use repeatable write-path" "$OUT_GRAPH_DEPRECATED_PATHS"
+
+DONE_NO_EVIDENCE_LEDGER="$GRAPH_DIR/done without evidence.md"
+cat > "$DONE_NO_EVIDENCE_LEDGER" <<'EOF'
+# Ledger
+---
+## 2026-07-07 typed-done
+- finding: [dry/med] src/a.js:1 — typed done without proof
+- status: done
+- attempts: 1/3
+- delta: claimed done
+- id: F-DONE
+- depends-on: none
+- read-path: src/a.js
+- write-path: src/a.js
+- acceptance: behavior passes
+EOF
+OUT_GRAPH_DONE_NO_EVIDENCE="$GRAPH_DIR/done-without-evidence.out"
+run_graph_case "graph: typed done without evidence exits nonzero" \
+  "$DONE_NO_EVIDENCE_LEDGER" 1 "$OUT_GRAPH_DONE_NO_EVIDENCE"
+assert_grep "graph: typed done requires verification evidence" \
+  "typed done finding requires evidence" "$OUT_GRAPH_DONE_NO_EVIDENCE"
+assert_grep "graph: typed done requires fixed-by commit" \
+  "typed done finding requires fixed-by" "$OUT_GRAPH_DONE_NO_EVIDENCE"
+assert_grep "graph: typed done requires verified-by identity and commit" \
+  "typed done finding requires verified-by" "$OUT_GRAPH_DONE_NO_EVIDENCE"
+
+OUT_GRAPH_REPEAT="$GRAPH_DIR/repeat.out"
+run_graph_case "graph: repeated run exits 0" "$CONFLICT_LEDGER" 0 "$OUT_GRAPH_REPEAT"
+if cmp -s "$OUT_GRAPH_CONFLICT" "$OUT_GRAPH_REPEAT"; then
+  pass "graph: repeated runs are byte-identical"
+else
+  fail "graph: repeated runs are byte-identical"
+fi
+GRAPH_LOCALES="$(locale -a 2>/dev/null || true)"
+case "$GRAPH_LOCALES" in
+  *en_US.UTF-8*) GRAPH_UTF8_LOCALE=en_US.UTF-8 ;;
+  *en_US.utf8*)  GRAPH_UTF8_LOCALE=en_US.utf8 ;;
+  *)             GRAPH_UTF8_LOCALE= ;;
+esac
+if [ -n "$GRAPH_UTF8_LOCALE" ]; then
+  OUT_GRAPH_LOCALE="$GRAPH_DIR/locale.out"
+  set +e
+  LC_ALL="$GRAPH_UTF8_LOCALE" bash "$GRAPH" "$CONFLICT_LEDGER" > "$OUT_GRAPH_LOCALE" 2>&1
+  RC_GRAPH_LOCALE=$?
+  set -e
+  if [ "$RC_GRAPH_LOCALE" -eq 0 ] && cmp -s "$OUT_GRAPH_CONFLICT" "$OUT_GRAPH_LOCALE"; then
+    pass "graph: output identical under C and $GRAPH_UTF8_LOCALE"
+  else
+    fail "graph: output identical under C and $GRAPH_UTF8_LOCALE (exit $RC_GRAPH_LOCALE)"
+  fi
+else
+  printf 'SKIP: %s\n' "graph: no en_US UTF-8 locale available on this machine"
+fi
+
+assert_grep "graph: analyzer declares contract version 1" \
+  "^GRAPH_CONTRACT_VERSION=1$" "$GRAPH"
+assert_grep "graph: improve playbook pins analyzer contract version 1" \
+  "ledger-graph-contract: v1" "$REPO_ROOT/playbooks/improve.md"
+assert_grep "graph: wave docs keep serial execution as default" \
+  "^Serial execution is the default" "$REPO_ROOT/playbooks/improve.md"
+assert_grep "graph: wave docs require dependencies done before selection" \
+  "^every selected finding must already be.*done" "$REPO_ROOT/playbooks/improve.md"
+assert_grep "graph: wave docs use analyzer write conflicts" \
+  "no reported write" "$REPO_ROOT/playbooks/improve.md"
+assert_grep "graph: wave docs keep landing serial" \
+  "^Landing is one serial merge queue" "$REPO_ROOT/playbooks/improve.md"
+assert_grep "graph: merge docs require one complete candidate commit" \
+  "exactly one.*commit ahead of current base" "$REPO_ROOT/playbooks/improve.md"
+assert_grep "graph: ledger docs match write/write-only policy" \
+  "Only write/write overlap is a conflict" "$REPO_ROOT/templates/agents-dir/ledger.md"
+assert_grep "graph: ledger docs match parent/child path policy" \
+  "ancestor/descendant overlap as a conflict" "$REPO_ROOT/templates/agents-dir/ledger.md"
+assert_grep "graph: ledger docs reserve none from the ID namespace" \
+  "none.*reserved for empty lists" "$REPO_ROOT/templates/agents-dir/ledger.md"
+assert_grep "graph: ledger docs define atomic repeatable path fields" \
+  "one atomic path; repeat the field" "$REPO_ROOT/templates/agents-dir/ledger.md"
+assert_grep "graph: ledger docs preserve commas inside paths" \
+  "commas and spaces are preserved" "$REPO_ROOT/templates/agents-dir/ledger.md"
+assert_not_grep "graph: ledger docs contain no removed reads field" \
+  "^- reads:" "$REPO_ROOT/templates/agents-dir/ledger.md"
+assert_not_grep "graph: ledger docs contain no removed writes field" \
+  "^- writes:" "$REPO_ROOT/templates/agents-dir/ledger.md"
 
 git -C "$FIXTURE" init -q
 cat > "$FIXTURE/package.json" <<'EOF'
@@ -104,7 +594,7 @@ EOF
 # A planted duplication: same block, same basename, in two directories. Exercises
 # both duplication-candidate branches (shared basename, and >60% shared lines
 # among the largest files) — the script's most intricate logic, and otherwise
-# never run by this harness.
+# never run by Ultraharness.
 mkdir -p "$FIXTURE/alpha" "$FIXTURE/beta"
 : > "$FIXTURE/alpha/dup.js"
 for i in $(seq 1 80); do
@@ -129,7 +619,7 @@ cp "$FIXTURE/alpha/Zeta.js" "$FIXTURE/beta/Zeta.js"
 echo "export const a = 4;" > "$FIXTURE/alpha/apple.js"
 cp "$FIXTURE/alpha/apple.js" "$FIXTURE/beta/apple.js"
 
-# A seeded harness footprint. Per AGENTS.md it is this harness's own output and is
+# A seeded Ultraharness footprint. Per AGENTS.md it is Ultraharness's own output and is
 # never evidence about the target, so no counted section may quote it. Sized and
 # shaped to break every one of them if it leaks: long enough to top "largest files",
 # 600 TODOs against the fixture's 1, and a basename shared with the root adapter so
@@ -138,9 +628,9 @@ cp "$FIXTURE/alpha/apple.js" "$FIXTURE/beta/apple.js"
 mkdir -p "$FIXTURE/.agents"
 : > "$FIXTURE/.agents/AGENTS.md"
 for i in $(seq 1 600); do
-  echo "seeded line $i — TODO: harness output, not repo evidence" >> "$FIXTURE/.agents/AGENTS.md"
+  echo "seeded line $i — TODO: Ultraharness output, not repo evidence" >> "$FIXTURE/.agents/AGENTS.md"
 done
-printf '<!-- harness:begin -->\nSee .agents/AGENTS.md\n<!-- harness:end -->\n' > "$FIXTURE/AGENTS.md"
+printf '<!-- ultraharness:begin -->\nSee .agents/AGENTS.md\n<!-- ultraharness:end -->\n' > "$FIXTURE/AGENTS.md"
 
 git -C "$FIXTURE" add -A
 git -C "$FIXTURE" -c user.name=fixture -c user.email=fixture@example.com \
@@ -189,7 +679,7 @@ fi
 assert_grep "gauges: line present with pinned fixture values" \
   "^gauges: files=[0-9][0-9]* loc=[0-9][0-9]* largest=400 todos=1 dup-candidates=[0-9][0-9]* test-files=0$" "$OUT"
 
-# --- footprint: .agents/ is the harness's output, never the target's evidence ---
+# --- footprint: .agents/ is Ultraharness's output, never the target's evidence ---
 # The counted sections must not quote it. Asserting on the path rather than on a
 # count keeps this honest as the fixture grows: "agents dir:" prints a bare
 # ".agents/", so the full path appearing anywhere means a counted section leaked it.
