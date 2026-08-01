@@ -9,7 +9,7 @@ growth is invisible.
 
 Step 5f runs exactly one of these per self-test, oldest-untested first. A path with
 no row here has never run and is evidence about nothing. Verdicts: `pass` (the
-assertions held) or `defect` (a harness file needed step 7 — say which and what).
+assertions held) or `defect` (an Ultraharness file needed step 7 — say which and what).
 
 Paths: `park-and-hard-stop`, `testless-verify`, `authority-envelope`,
 `mid-pass-resume`, `review-guard-removal`.
@@ -21,7 +21,7 @@ Paths: `park-and-hard-stop`, `testless-verify`, `authority-envelope`,
 
 One line per self-test run, from `wc -l playbooks/*.md` (step 1 appends it). Growth
 without a cause named in the same run's report is itself a finding — the playbooks'
-length is the harness's biggest compliance risk, and every defect fix tends to add
+length is Ultraharness's biggest compliance risk, and every defect fix tends to add
 lines. The 2026-07-26 baseline follows the table-class removal and the resume split.
 
 | date | audit | improve | resume | review | seed | self-test | unseed | verify | total |

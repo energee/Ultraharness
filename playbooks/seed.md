@@ -1,7 +1,7 @@
 # seed.md — bootstrap a tailored `.agents/` into a target repo
 
-You are seeding a *target* repo with the harness's `.agents/` working-memory
-directory, tailored to that repo's observed reality. All paths below: `<harness>` is
+You are seeding a *target* repo with Ultraharness's `.agents/` working-memory
+directory, tailored to that repo's observed reality. All paths below: `<ultraharness>` is
 this repo's root; `<target>` is the target repo's root. Seeding is idempotent —
 re-running this playbook on an already-seeded repo is the update path, and must
 refresh stale content without duplicating anything or clobbering user edits.
@@ -11,7 +11,7 @@ refresh stale content without duplicating anything or clobbering user edits.
 Check all of these before doing anything else. If one fails, stop and report exactly
 what is missing.
 
-1. A target path was given. If not, ask for one — never operate on the harness repo
+1. A target path was given. If not, ask for one — never operate on the Ultraharness repo
    itself unless explicitly told to.
 2. `<target>` exists and is a directory.
 3. `<target>` is a git repo: run `git -C <target> rev-parse --is-inside-work-tree`
@@ -19,24 +19,24 @@ what is missing.
 4. The working tree is clean: run `git -C <target> status --porcelain` and require
    empty output. If dirty, show the user the output and ask whether to proceed
    anyway; proceed only on explicit acknowledgment.
-5. The harness templates are readable: `<harness>/templates/agents-dir/` must contain
+5. Ultraharness templates are readable: `<ultraharness>/templates/agents-dir/` must contain
    `AGENTS.md`, `conventions.md`, `principles.md`, `ledger.md`, `learnings.md`, and a
    `lenses/` subdirectory holding one condensed lens per full-form lens in
-   `<harness>/lenses/`. A lens present in one directory and missing from the other is
-   a harness defect — stop and report it.
+   `<ultraharness>/lenses/`. A lens present in one directory and missing from the other is
+   an Ultraharness defect — stop and report it.
 6. `.agents/` is not already ignored by the target: run
    `git -C <target> check-ignore -v .agents/AGENTS.md`. If it reports a matching
    rule, stop and tell the user — an ignored `.agents/` means step 7's `git add`
    silently skips everything this playbook writes and the seed is never committed.
    The user must remove or narrow that rule first. Checking here, before anything is
    written, is the point: stopping later would leave the target dirty with
-   uncommittable harness files.
+   uncommittable Ultraharness files.
 
 ## Workflow
 
 ### 1. Gather facts
 
-Run `bash scripts/audit-checks.sh <target>` from the harness repo root. Keep the full
+Run `bash scripts/audit-checks.sh <target>` from the Ultraharness repo root. Keep the full
 output — you will use its `detected:`, `commands:`, `git:`, `teachability:`, and
 `gates:` lines below. Note: its `commands:` line is *discovered, not run* — treat those as
 candidates, not verified answers.
@@ -70,8 +70,8 @@ owns.
 
 ### 3. Observe conventions
 
-Observe the target's own code only. Per the footprint rule in `<harness>/AGENTS.md`,
-exclude the harness footprint from both the conventions and `{{REPO_SUMMARY}}`:
+Observe the target's own code only. Per the footprint rule in `<ultraharness>/AGENTS.md`,
+exclude Ultraharness footprint from both the conventions and `{{REPO_SUMMARY}}`:
 counting it makes every re-seed rewrite the summary with numbers that grew only
 because you seeded.
 
@@ -103,7 +103,7 @@ not "correct" the printed number either way; facts stay the script's.
 
 ### 4. Instantiate `.agents/`
 
-Copy the five top-level files from `<harness>/templates/agents-dir/` into
+Copy the five top-level files from `<ultraharness>/templates/agents-dir/` into
 `<target>/.agents/`, replacing every `{{...}}` placeholder:
 
 - `AGENTS.md`: fill `{{REPO_SUMMARY}}`, `{{BUILD_CMD}}`, `{{TEST_CMD}}`,
@@ -148,7 +148,7 @@ resolved there (filled if a gate fired, deleted with its section if none did).
 - A whole section the template has and the target's copy lacks is **missing, not
   deleted** — add it. "Update only stale lines" governs lines the target already has;
   it would otherwise freeze every repo seeded before a template grew a section, which
-  is exactly the repo that needs the new content. Harness-owned sections are the ones
+  is exactly the repo that needs the new content. Ultraharness-owned sections are the ones
   the template defines; anything else in the file is the user's and stays untouched.
   Insert it where the template puts it, relative to the sections either side — never
   appended blindly to the end, which would land `## Guard precedence — governs every
@@ -192,13 +192,13 @@ If you cannot confirm any cited hit, the gate has **not** fired. Copy nothing an
 — the same default-deny as a `not-fired` line, so an ambiguous repo resolves the same
 way every time instead of resolving by mood.
 
-The footprint rule in `<harness>/AGENTS.md` is already enforced upstream: the script
+The footprint rule in `<ultraharness>/AGENTS.md` is already enforced upstream: the script
 excludes `.agents/`, `CHANGELOG`, `docs/`, and documentation extensions before matching,
-so a re-seeded repo cannot fire a gate on the harness's own prose about retries. You do
+so a re-seeded repo cannot fire a gate on Ultraharness's own prose about retries. You do
 not need to re-check that, and you must not undo it by grepping around it.
 
 For each lens whose gate **fires**: copy its condensed counterpart from
-`<harness>/templates/agents-dir/lenses/<name>.md` into `<target>/.agents/lenses/`
+`<ultraharness>/templates/agents-dir/lenses/<name>.md` into `<target>/.agents/lenses/`
 verbatim (no placeholders in these files). Then fill the `{{LENSES}}` placeholder in
 `<target>/.agents/AGENTS.md` with one line per fired lens naming the lens and the
 evidence that fired it.
@@ -219,7 +219,7 @@ carries zero added lines from this step, which is the point of gating.
   the user's call, not yours. Leave its `{{LENSES}}`-derived line in `AGENTS.md` too,
   and say in the report that the line now records a gate that no longer fires.
 - A lens file the user has edited is never overwritten — refresh only lines that are
-  stale against the current harness template, exactly as for the five top-level files.
+  stale against the current Ultraharness template, exactly as for the five top-level files.
 
 ### 5. Adapter files at the target root
 
@@ -228,17 +228,18 @@ For each of `<target>/AGENTS.md` and `<target>/CLAUDE.md`:
 - **If absent**: create it containing exactly this pointer block, delimiters included:
 
   ```
-  <!-- harness:begin -->
+  <!-- ultraharness:begin -->
   Canonical agent instructions live in `.agents/AGENTS.md`.
   Read that file before doing anything else in this repo.
-  <!-- harness:end -->
+  <!-- ultraharness:end -->
   ```
 
-- **If present**: never overwrite or rewrite any existing content. If the file
-  already contains a `<!-- harness:begin -->`…`<!-- harness:end -->` block, replace
-  only the lines between (and including) those delimiters with the block above —
-  never add a second block. If no block exists, append the block at the end of the
-  file, after a blank line.
+- **If present**: never overwrite or rewrite any existing content. Treat the deprecated
+  `<!-- harness:begin -->`…`<!-- harness:end -->` block or a current
+  `<!-- ultraharness:begin -->`…`<!-- ultraharness:end -->` block as the same owned slot. Replace
+  whichever exists with the current block above; if both exist, keep one current block
+  and remove the deprecated duplicate. If neither exists, append the current block at
+  the end of the file, after a blank line. Never leave a second pointer block.
 
 ### 6. Gitignore the worktrees dir
 
@@ -250,7 +251,7 @@ covers it, change nothing.
 
 On the branch the target has checked out at run start (do not create branches or
 switch), stage exactly what this playbook wrote — `.agents/`, the adapter files,
-`.gitignore` — and commit with the message `Seed .agents/ harness`. Do not add a
+`.gitignore` — and commit with the message `Seed .agents/ Ultraharness`. Do not add a
 Co-Authored-By line. Then run `git -C <target> status --porcelain` and confirm none
 of the seeded files remain unstaged. Also confirm the seeded files are tracked:
 `git -C <target> ls-files .agents/` must list all five top-level files, plus one entry
@@ -290,11 +291,11 @@ touch a file just to have something to commit.
   matching rule; a seed that cannot be committed is not a seed. Nothing has been
   written at that point — leave it that way.
 - **On any stop above** — if `<target>/.agents/ledger.md` already exists, append one
-  record in the ledger's `Run stop` format (see `<harness>/templates/agents-dir/ledger.md`),
+  record in the ledger's `Run stop` format (see `<ultraharness>/templates/agents-dir/ledger.md`),
   then report the same to the user.
 
 ## Anti-rationalization table
 
 Every row this playbook carried restated a numbered step, and the restatement class
-was removed 2026-07-26 on ablation evidence — see `<harness>/docs/ablations.md`. A
+was removed 2026-07-26 on ablation evidence — see `<ultraharness>/docs/ablations.md`. A
 row goes in only when a real run makes an excuse no numbered step already forbids.

@@ -17,10 +17,10 @@ Confirm all of these before starting the loop; if any fails, stop and fix it fir
 2. The target is seeded: `<target>/.agents/` exists with `ledger.md`,
    `principles.md`, and `conventions.md`. If not, run `playbooks/seed.md` first.
 3. Read the ledger top to bottom. Entries with status `in-progress` mean a previous
-   run died mid-finding — read `<harness>/playbooks/resume.md` and follow its triage
+   run died mid-finding — read `<ultraharness>/playbooks/resume.md` and follow its triage
    before starting anything else. Never start fresh work while an `in-progress` entry
    sits unexamined. This read also tells item 4 whether this is a resumed run. Then run
-   `bash <harness>/scripts/ledger-graph.sh <target>/.agents/ledger.md` and retain its
+   `bash <ultraharness>/scripts/ledger-graph.sh <target>/.agents/ledger.md` and retain its
    complete report. The script is read-only and deterministic; it is the calculator
    for readiness and write overlap, never judgment or permission to mutate.
    - `result: INVALID` (including a missing dependency ID, cycle, or malformed present
@@ -83,7 +83,7 @@ for fix work only, then lands each pass serially.
 
 - If the ledger has `open` or `in-progress` entries, that is your queue — do not
   re-audit first. An `in-progress` entry is resumed at whatever step the triage in
-  `<harness>/playbooks/resume.md` indicates — follow it rather than judging from
+  `<ultraharness>/playbooks/resume.md` indicates — follow it rather than judging from
   branch topology; merges here normally fast-forward, so a landed fix and a branch
   that never committed anything look identical from topology alone.
 - If the ledger has no open entries (first run, or queue drained), run
@@ -156,9 +156,9 @@ does this for the whole selected set before concurrency begins.
 
 Three standing rules shape what counts as an improvement:
 
-- **Removal earns equal rank.** Deleting code, dependencies, dead config, or harness
+- **Removal earns equal rank.** Deleting code, dependencies, dead config, or Ultraharness
   artifacts that no longer earn their maintenance cost — including files this
-  harness itself seeded — is a first-class fix, ranked by the same
+  Ultraharness itself seeded — is a first-class fix, ranked by the same
   severity/radius/effort rules as additions.
   - **Except at a boundary.** Guard precedence (the `## Guard precedence` section of
     `<target>/.agents/principles.md`) binds this rule: a guard is not dead because
@@ -199,7 +199,7 @@ Three standing rules shape what counts as an improvement:
 
 For each selected finding, create a worktree at
 `<target>/.agents/worktrees/<finding-slug>/` on a new branch
-`harness/<finding-slug>`, branched from the run's base branch (readiness step 4).
+`ultraharness/<finding-slug>`, branched from the run's base branch (readiness step 4).
 One finding, one worktree, one branch. All fix work happens inside its own worktree;
 a wave never shares one.
 
@@ -333,7 +333,7 @@ this pass wrote is left dirtying the target.
 - **Say what you wished you had.** One line in the report for anything this pass had
   to rediscover, work around, or guess: a fact recorded nowhere, a command that did
   not exist, a rubric that did not cover the case. This is telemetry for whoever
-  maintains the harness, not context for the next session — it goes in the report, not
+  maintains Ultraharness, not context for the next session — it goes in the report, not
   into the target. Nothing missing, nothing written.
 - If the fix changed code that `<target>/.agents/conventions.md` cites, or made one of
   its claims false, correct that claim **in the fix commit** — docs travel with the
@@ -390,7 +390,7 @@ loop, envelope permitting.
 ### Run log — every exit
 
 However a run ends — the queue drained and confirmed empty (step 9), an envelope
-trip, or any stop below — append one line to `<harness>/docs/runs.md` before the
+trip, or any stop below — append one line to `<ultraharness>/docs/runs.md` before the
 final report: date, target, findings done / parked / still open, the verdict mix,
 the gauges movement (the script's `gauges:` line from this run's first audit and
 from its most recent one, `start → end`), and anything step 8's "say what you wished
@@ -398,14 +398,14 @@ you had" produced. One line per run, not per pass. If the wish matches a line al
 in that file's `## Recurring wishes` tally, increment its `seen` count instead of
 re-recording it — the promotion rule lives with the tally. Fixtures built by
 `playbooks/self-test.md` are not runs — self-test improve passes skip this line. The
-log is telemetry about the harness, so it lives in the harness repo, never in the
+log is telemetry about Ultraharness, so it lives in the Ultraharness repo, never in the
 target.
 
 ### Authority envelope
 
 The safety envelope below bounds how *much* a run does; this bounds *what* it may do.
 Inspection authority is not mutation authority. Without asking, a run may change the
-target's own source, tests, and docs, and write the files this harness owns. It may
+target's own source, tests, and docs, and write the files Ultraharness owns. It may
 not, without explicit user say-so in this run: push, open or merge a pull request,
 change the target's remote, rewrite published history, touch CI/deploy config or
 secrets, add or upgrade a dependency, delete a test, or switch the target's checked-out
@@ -446,7 +446,7 @@ reads them to see what was already tried. Keeping them means **committing** them
 just leaving the worktree: commit the last attempt on the finding's branch with a
 first line beginning `parked(<finding-slug>): ` — deliberately not the `fix(` form, so
 the resume triage cannot mistake it for a landed fix — and record its **commit SHA**
-in the ruling. The SHA, not the branch name: step 3 resets `harness/<finding-slug>` and
+in the ruling. The SHA, not the branch name: step 3 resets `ultraharness/<finding-slug>` and
 step 7 deletes it, so the branch stops pointing at the attempts the moment anyone
 unparks the finding, which is exactly when someone follows the pointer. An uncommitted
 worktree is not preservation: step 3's reset path wipes it the moment anything
@@ -463,7 +463,7 @@ failed run — retry before concluding anything about capability.
   and its safe next action; never infer missing IDs, break a cycle by ignoring an edge,
   or audit over the blocked queue.
 - `.agents/AGENTS.md` records no test entry at all, or the recorded test command
-  errors before running any test (command not found, harness crash) → stop; that is
+  errors before running any test (command not found, Ultraharness crash) → stop; that is
   a seeding gap, report it. A recorded `none` or `none verified` is NOT this stop —
   it proceeds with missing tests as finding #1 (readiness step 5).
 - The baseline finding (readiness step 5's finding #1) parked → stop the run.
@@ -472,7 +472,7 @@ failed run — retry before concluding anything about capability.
   only earn PASS (unverified-by-tests), so the run would merge a pile of unverified
   changes and call it done. Neither is worth the remaining budget. Write the ledger
   and report it — and leave the baseline worktree in place per the failure path above.
-- Verify itself is broken (the harness's gate, not the target's tests) → stop and
+- Verify itself is broken (Ultraharness's gate, not the target's tests) → stop and
   report; do not self-certify fixes.
 - The checked-out run base itself moved or changed identity in a way the coordinator
   cannot reconcile → stop, write the ledger, report it. An ordinary candidate update
@@ -481,7 +481,7 @@ failed run — retry before concluding anything about capability.
 - **On any stop — the ones above and the safety envelope alike** — record the stop in
   the ledger, then commit it, then report to the user. Both halves matter:
   - **Record it** in the ledger's `Run stop` format (see
-    `<harness>/templates/agents-dir/ledger.md`). It is a run record, not a finding, so it does
+    `<ultraharness>/templates/agents-dir/ledger.md`). It is a run record, not a finding, so it does
     not take the `Entry format` fields — no status, no attempts, no delta. Skip it
     entirely when a parked finding's own `- ruling:` already says both things, as the
     parked-baseline stop does; one honest record beats two that can drift apart.
@@ -495,5 +495,5 @@ failed run — retry before concluding anything about capability.
 ## Anti-rationalization table
 
 Every row this playbook carried restated a numbered step, and the restatement class
-was removed 2026-07-26 on ablation evidence — see `<harness>/docs/ablations.md`. A
+was removed 2026-07-26 on ablation evidence — see `<ultraharness>/docs/ablations.md`. A
 row goes in only when a real run makes an excuse no numbered step already forbids.

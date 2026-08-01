@@ -176,8 +176,8 @@ a run to fill the gap — a smoke command you wrote yourself is not the repo's s
 a verdict that quotes one reads as coverage that does not exist. If you ran something ad
 hoc to satisfy your own curiosity, it does not belong in the evidence block. The one
 exception is labeled equipment: for a web-facing change whose page the target's own
-serve command can stand up, you may run `<harness>/scripts/smoke-check.sh <url>
---expect <string>` and quote its output under a separate `smoke:` label. It is harness
+serve command can stand up, you may run `<ultraharness>/scripts/smoke-check.sh <url>
+--expect <string>` and quote its output under a separate `smoke:` label. It is Ultraharness
 equipment, not the repo's suite: its success never upgrades the verdict, and
 `browser: unavailable` means omit the label entirely — but `fetch: FAILED` or
 `expect … NOT FOUND` on the page the change touched is a real failed run, and that
@@ -221,16 +221,16 @@ to `verified-by`. A preliminary `WORKTREE at <HEAD>` record never fills those fi
   sessions burn hours.
 - **No diff, or no nameable change**: stop at the probe; report that there is
   nothing to verify.
-- **Test command itself is broken** (command not found, harness crash before any
+- **Test command itself is broken** (command not found, Ultraharness crash before any
   test runs): stop and report it — that is an environment/seed problem, not a
   verdict on the change. **Unless the diff introduces the test files**: then the
   change is what broke it, so the verdict is FAIL, per probe item 3.
 - **On any stop above** — if `<target>/.agents/ledger.md` exists, append one record
-  in the ledger's `Run stop` format (see `<harness>/templates/agents-dir/ledger.md`), then
+  in the ledger's `Run stop` format (see `<ultraharness>/templates/agents-dir/ledger.md`), then
   report the same to the user.
 
 ## Anti-rationalization table
 
 Every row this playbook carried restated a numbered step, and the restatement class
-was removed 2026-07-26 on ablation evidence — see `<harness>/docs/ablations.md`. A
+was removed 2026-07-26 on ablation evidence — see `<ultraharness>/docs/ablations.md`. A
 row goes in only when a real run makes an excuse no numbered step already forbids.

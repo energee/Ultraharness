@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test.sh — bash test harness for scripts/audit-checks.sh,
+# test.sh — bash test suite for scripts/audit-checks.sh,
 # scripts/ledger-graph.sh, and scripts/smoke-check.sh, plus the rubric sync
 # tripwire pinning full-form rubrics to their condensed twins.
 # Builds a throwaway fixture repo in a temp dir, runs audit-checks.sh against it,
@@ -54,14 +54,28 @@ check_sync principles/solid.md      1c29917458db8535e91a311aed23d99b9871a56c8753
 check_sync principles/yagni.md      c724c113841a6cf80ee892eb8cc9df6986ba267fbcbf9fdb55b434f7814d77f9
 check_sync principles/fail-fast.md  38b1e68fa1d765accf3de14ce531b0ea738be8fd8dcf31aa81ae1381feb2770b
 check_sync lenses/a11y.md           8488cde111a0bb622369b32eb7f2b2effd47e30e6a6e4a259959c4f5bcf72091
-check_sync lenses/atomic-design.md  033a38bfb0b266577cf2cf30fc33b2c13a283f1c25ece79ce135d6c5e6f8451f
-check_sync lenses/idempotency.md    f6cc63250e4ab2e5c9fb9d21ae4e1a9bc1c1800b4697c5df13d9022c80223948
-check_sync lenses/security-boundary.md  b978e51f5166f1ff0aff924c1f29112d7144ec992f2cb0842832b4f0cce7ae37
+check_sync lenses/atomic-design.md  393a6fcdaab01690ddb82b5866481fe396253191a1667e7a8f86ace299573cf2
+check_sync lenses/idempotency.md    61a01176cf0d5cb30ea7de4e10219c7cb27d223ce736c36a35618818e2c1a456
+check_sync lenses/security-boundary.md  52f201a89f345a7b26931346c78b10fff9789529cecaa3dad550786d7f01042d
 check_sync templates/agents-dir/principles.md            e5777b57c21c05d0aa55a62c16a1f4f4a7fb6160c7672e0956325e54102980d8
 check_sync templates/agents-dir/lenses/a11y.md           58767016c3c2de6ddc9097167611108b2b61d2e7b020a50437086d6a14271189
 check_sync templates/agents-dir/lenses/atomic-design.md  40f7e65a40d11872f0e599c638c84556dad1f2510690daa3503e6ae87c80f686
 check_sync templates/agents-dir/lenses/idempotency.md    23b55a5b1c6b1fe94825816dc1541a16057d63ad4765ef7670e2f264e2647e68
 check_sync templates/agents-dir/lenses/security-boundary.md  c6126465c617e589ddfa885416386e01fcc1c35c1e62040d9bb0c2020db042a6
+
+# --- Ultraharness branding and protocol namespace ---
+assert_grep "branding: README uses Ultraharness name" \
+  "^# Ultraharness$" "$REPO_ROOT/README.md"
+assert_grep "branding: seed writes Ultraharness pointer marker" \
+  "<!-- ultraharness:begin -->" "$REPO_ROOT/playbooks/seed.md"
+assert_grep "branding: improve writes Ultraharness branch namespace" \
+  "ultraharness/<finding-slug>" "$REPO_ROOT/playbooks/improve.md"
+assert_grep "branding: seed uses Ultraharness commit identity" \
+  "Seed \.agents/ Ultraharness" "$REPO_ROOT/playbooks/seed.md"
+assert_grep "branding: seed migrates the deprecated pointer marker" \
+  "Treat the deprecated" "$REPO_ROOT/playbooks/seed.md"
+assert_grep "branding: resume recognizes the deprecated branch namespace" \
+  "or the deprecated" "$REPO_ROOT/playbooks/resume.md"
 
 # --- fixture repo ---
 FIXTURE="$(mktemp -d)"
@@ -580,7 +594,7 @@ EOF
 # A planted duplication: same block, same basename, in two directories. Exercises
 # both duplication-candidate branches (shared basename, and >60% shared lines
 # among the largest files) — the script's most intricate logic, and otherwise
-# never run by this harness.
+# never run by Ultraharness.
 mkdir -p "$FIXTURE/alpha" "$FIXTURE/beta"
 : > "$FIXTURE/alpha/dup.js"
 for i in $(seq 1 80); do
@@ -605,7 +619,7 @@ cp "$FIXTURE/alpha/Zeta.js" "$FIXTURE/beta/Zeta.js"
 echo "export const a = 4;" > "$FIXTURE/alpha/apple.js"
 cp "$FIXTURE/alpha/apple.js" "$FIXTURE/beta/apple.js"
 
-# A seeded harness footprint. Per AGENTS.md it is this harness's own output and is
+# A seeded Ultraharness footprint. Per AGENTS.md it is Ultraharness's own output and is
 # never evidence about the target, so no counted section may quote it. Sized and
 # shaped to break every one of them if it leaks: long enough to top "largest files",
 # 600 TODOs against the fixture's 1, and a basename shared with the root adapter so
@@ -614,9 +628,9 @@ cp "$FIXTURE/alpha/apple.js" "$FIXTURE/beta/apple.js"
 mkdir -p "$FIXTURE/.agents"
 : > "$FIXTURE/.agents/AGENTS.md"
 for i in $(seq 1 600); do
-  echo "seeded line $i — TODO: harness output, not repo evidence" >> "$FIXTURE/.agents/AGENTS.md"
+  echo "seeded line $i — TODO: Ultraharness output, not repo evidence" >> "$FIXTURE/.agents/AGENTS.md"
 done
-printf '<!-- harness:begin -->\nSee .agents/AGENTS.md\n<!-- harness:end -->\n' > "$FIXTURE/AGENTS.md"
+printf '<!-- ultraharness:begin -->\nSee .agents/AGENTS.md\n<!-- ultraharness:end -->\n' > "$FIXTURE/AGENTS.md"
 
 git -C "$FIXTURE" add -A
 git -C "$FIXTURE" -c user.name=fixture -c user.email=fixture@example.com \
@@ -665,7 +679,7 @@ fi
 assert_grep "gauges: line present with pinned fixture values" \
   "^gauges: files=[0-9][0-9]* loc=[0-9][0-9]* largest=400 todos=1 dup-candidates=[0-9][0-9]* test-files=0$" "$OUT"
 
-# --- footprint: .agents/ is the harness's output, never the target's evidence ---
+# --- footprint: .agents/ is Ultraharness's output, never the target's evidence ---
 # The counted sections must not quote it. Asserting on the path rather than on a
 # count keeps this honest as the fixture grows: "agents dir:" prints a bare
 # ".agents/", so the full path appearing anywhere means a counted section leaked it.

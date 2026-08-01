@@ -14,7 +14,7 @@ gates answer different questions: verify asks "does it work as claimed", review 
 ## Readiness probe
 
 1. You have a target repo path. If none was given, ask for one — never review changes
-   to the harness repo itself unless explicitly told to.
+   to the Ultraharness repo itself unless explicitly told to.
 2. You can name the change under review in one sentence, and it has a diff: either
    the working tree (`git -C <target> status --porcelain` plus `git -C <target> diff
    HEAD`), or a range the user names (`<base>..<tip>`). If `status` lists untracked
@@ -23,8 +23,8 @@ gates answer different questions: verify asks "does it work as claimed", review 
    empty diff means nothing to review: stop and report that.
 3. Rubrics: if the target is seeded, read `<target>/.agents/principles.md` and every
    lens in `<target>/.agents/lenses/` — a lens that is present applies, exactly as in
-   the audit. If not seeded, read the harness copy at
-   `<harness>/templates/agents-dir/principles.md`, apply the five rubrics only, and
+   the audit. If not seeded, read the Ultraharness copy at
+   `<ultraharness>/templates/agents-dir/principles.md`, apply the five rubrics only, and
    say in the report that no lens was evaluated. Review never seeds: it must be
    runnable on a repo you would not write to.
 
@@ -90,12 +90,12 @@ findings as ledger entries, that is the audit's job — run it after the change 
   <list>") in the report. An unread hunk is an unreviewed change; the report must
   say the review is partial, and a partial review ranks what it saw. No silent caps.
 - **On any stop above** — if `<target>/.agents/ledger.md` exists, append one record
-  in the ledger's `Run stop` format (see `<harness>/templates/agents-dir/ledger.md`);
+  in the ledger's `Run stop` format (see `<ultraharness>/templates/agents-dir/ledger.md`);
   then report the same to the user. Review findings themselves never enter the
   ledger; only the stop record does.
 
 ## Anti-rationalization table
 
 This playbook starts with no rows. Rows enter only from an excuse a real run makes
-that no numbered step already forbids — never speculatively (`<harness>/docs/ablations.md`
+that no numbered step already forbids — never speculatively (`<ultraharness>/docs/ablations.md`
 records the rule and the evidence class removals rest on).

@@ -1,4 +1,4 @@
-# harness
+# Ultraharness
 
 Point any coding agent at this repo to make **another** repo simpler, DRY-er, KISS,
 SOLID, and YAGNI — plus conditional lenses (idempotency, atomic design) that apply
@@ -8,14 +8,14 @@ plus four thin bash scripts (one opt-in). The agent reads a front door, routes t
 playbook, and does the rest.
 
 It never operates on itself unless you explicitly say so. `<target>` below is your
-repo; `<harness>` is this one.
+repo; `<ultraharness>` is this one.
 
 ## Quick start
 
 Clone it anywhere — there is nothing to install and nothing to build:
 
 ```
-git clone https://github.com/energee/harness.git ~/harness
+git clone https://github.com/energee/Ultraharness.git ~/ultraharness
 ```
 
 Then copy one of these prompts into your agent CLI, replacing `<target-path>` with the
@@ -24,13 +24,13 @@ Gemini CLI, OpenCode, and any other agent that can read files and run shell comm
 
 | Action | Prompt |
 | --- | --- |
-| Seed | `Read ~/harness/AGENTS.md, then run the seed playbook against my repo at <target-path>.` |
-| Audit | `Read ~/harness/AGENTS.md, then run the audit playbook against my repo at <target-path>.` |
-| Improve | `Read ~/harness/AGENTS.md, then run the improve playbook against my repo at <target-path>.` |
-| Review | `Read ~/harness/AGENTS.md, then run the review playbook on <the change> in <target-path>.` |
-| Verify | `Read ~/harness/AGENTS.md, then run the verify playbook on the change I just made in <target-path>.` |
-| Unseed | `Read ~/harness/AGENTS.md, then run the unseed playbook against my repo at <target-path>.` |
-| Self-test | `Read ~/harness/AGENTS.md, then run the self-test playbook.` |
+| Seed | `Read ~/ultraharness/AGENTS.md, then run the seed playbook against my repo at <target-path>.` |
+| Audit | `Read ~/ultraharness/AGENTS.md, then run the audit playbook against my repo at <target-path>.` |
+| Improve | `Read ~/ultraharness/AGENTS.md, then run the improve playbook against my repo at <target-path>.` |
+| Review | `Read ~/ultraharness/AGENTS.md, then run the review playbook on <the change> in <target-path>.` |
+| Verify | `Read ~/ultraharness/AGENTS.md, then run the verify playbook on the change I just made in <target-path>.` |
+| Unseed | `Read ~/ultraharness/AGENTS.md, then run the unseed playbook against my repo at <target-path>.` |
+| Self-test | `Read ~/ultraharness/AGENTS.md, then run the self-test playbook.` |
 
 If you cloned somewhere else, use that path instead — nothing depends on the location.
 Pulling the latest is the whole update procedure: the next run picks it up, and
@@ -96,7 +96,7 @@ unpark it. Nothing is silently dropped, and no run is reported finished with wor
 quietly removed from the queue. The triage for a run another session left mid-finding
 lives in `playbooks/resume.md`, read only when the ledger shows one — the common path
 never loads it. Every real run appends one line to `docs/runs.md` on exit — the
-harness's durable record of what it has actually done in the wild.
+Ultraharness's durable record of what it has actually done in the wild.
 
 **`review.md` — judge a change before it lands.** The audit's discipline pointed at
 one diff — working tree, branch, or commit range. Same rubrics, lenses, and guard
@@ -125,7 +125,7 @@ re-seed with the old record intact. It stops for a live run (a worktree or an
 before the tree's copy goes. A repo that was never seeded gets "not seeded, nothing
 to do" — success, not an error.
 
-**`self-test.md` — prove the harness still works.** Builds throwaway fixtures in a
+**`self-test.md` — prove Ultraharness still works.** Builds throwaway fixtures in a
 temp dir, runs the real playbooks against them, and asserts on what actually landed.
 Reading a playbook and judging it sound is explicitly not a result.
 
@@ -157,7 +157,7 @@ curl -L -o lightpanda https://github.com/lightpanda-io/browser/releases/download
 chmod +x lightpanda && export LIGHTPANDA_BIN="$PWD/lightpanda"
 ```
 
-The harness never bundles or downloads it — that is what keeps "no install, no
+Ultraharness never bundles or downloads it — that is what keeps "no install, no
 runtime" true for everyone who doesn't opt in. Two honest limits: Lightpanda is beta
 with partial Web API coverage, and it renders no pixels — this proves a page stands up
 and its DOM says what it should, never how it looks. And a smoke fact is not a test
@@ -234,7 +234,7 @@ graph scheduling, record `id`, `depends-on`, `acceptance`, and one or more repea
 known-empty path set. Inspect the queue without changing it:
 
 ```
-bash ~/harness/scripts/ledger-graph.sh "/path with spaces/repo/.agents/ledger.md"
+bash ~/ultraharness/scripts/ledger-graph.sh "/path with spaces/repo/.agents/ledger.md"
 ```
 
 The report lists ready and blocked findings, blockers, cycles, missing IDs, active
@@ -297,7 +297,7 @@ verification is recorded on its entry:
 
 Git plus this constrained Markdown stays the source of truth. A graph database would
 add installation, synchronization, and failure modes without improving the small
-queries the harness actually needs; Git history already supplies temporal ordering.
+queries Ultraharness actually needs; Git history already supplies temporal ordering.
 
 ## Rubrics, lenses, and dimensions
 
@@ -359,7 +359,7 @@ from, and neither exists until you build it.
   clobbered.
 - **Evidence before claims.** No completion claim without fresh output backing it.
 - **All findings are ranked.** Never a partial list, never a silent cap.
-- **The harness's own footprint is never evidence about your repo.** `.agents/` and
+- **Ultraharness's own footprint is never evidence about your repo.** `.agents/` and
   the pointer blocks are the agent's output — never counted, judged, or allowed to
   fire a lens gate.
 - **Two envelopes bound an improve run.** The *safety* envelope bounds how much it
@@ -393,7 +393,7 @@ docs/graph-model.md       # graph/provenance decisions and deliberately deferred
 docs/runs.md              # one line per real improve run — the field record
 ```
 
-## Testing the harness itself
+## Testing Ultraharness itself
 
 Run `bash scripts/test.sh` from this repo's root — the bash tests for
 `scripts/audit-checks.sh`, `scripts/ledger-graph.sh`, and `scripts/smoke-check.sh` (the browser-present
@@ -424,7 +424,7 @@ which have actually run. The same file tracks a per-run prose budget of the
 playbooks' line counts, so growth has to be justified rather than discovered. A green
 self-test is evidence about what it ran, and nothing else — including about who ran
 it: instructions cannot force compliance, so a self-test is evidence about the agent
-and model tier that executed it as much as about the harness. Run it with the same
+and model tier that executed it as much as about Ultraharness. Run it with the same
 agent you intend to point at your repos before trusting that agent with an
 unattended improve run.
 

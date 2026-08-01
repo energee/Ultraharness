@@ -63,8 +63,9 @@ first that matches:
   rules below. Do not test this by comparing the branch tip against base's tip: after
   a fast-forward they match on a landed fix too.
 
-If no worktree exists but `harness/<finding-slug>` does, inspect that branch tip with
-the same ordered rules before deciding. Recreate its worktree without `-b`: an evicted
+If no worktree exists but either `ultraharness/<finding-slug>` or the deprecated
+`harness/<finding-slug>` branch does, inspect that branch tip with the same ordered
+rules before deciding. Recreate its worktree without `-b`: an evicted
 or `fix(...)` commit is durable work to repair or reverify, not something to reset.
 Only when neither the worktree nor a branch carrying this pass's commit exists do you
 treat the entry as `open` and restart it (increment nothing — attempts count only

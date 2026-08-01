@@ -66,7 +66,7 @@ Smallest intervention first:
 
 ## When NOT to apply
 
-- **Never claim exploitability.** This harness reads code. Whether the route is
+- **Never claim exploitability.** This Ultraharness reads code. Whether the route is
   reachable, the value attacker-controlled in practice, or the deployment exposed is
   runtime knowledge; the finding names the missing check, not a vulnerability.
 - **Deliberately public routes** — health checks, login and token endpoints, docs,

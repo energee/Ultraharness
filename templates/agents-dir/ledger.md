@@ -63,7 +63,7 @@ Readiness has four rules:
   present and `done`. A missing ID, a parked dependency, or an open/in-progress
   dependency blocks it; missing IDs are invalid state rather than ordinary blockers.
 - Dependency cycles and malformed present fields are invalid state. Stop before fix
-  or merge work until `bash <harness>/scripts/ledger-graph.sh <ledger>` reports `OK`.
+  or merge work until `bash <ultraharness>/scripts/ledger-graph.sh <ledger>` reports `OK`.
 - Only write/write overlap is a conflict. Reads are provenance and review scope:
   read/read and read/write overlap do not prevent a wave because worktrees isolate fix
   work and every candidate is updated and reverified before its serial merge.

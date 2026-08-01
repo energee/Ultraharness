@@ -68,7 +68,7 @@ Only reach for a distributed transaction or an outbox when 1-3 provably cannot h
 - **Exactly-once delivery claims.** Never assert a system does or does not achieve
   exactly-once. That is a claim about a broker and a network, not about code you read.
 - **Distributed partial-failure analysis.** Interleavings, split-brain, and clock skew
-  need runtime evidence this harness does not gather.
+  need runtime evidence Ultraharness does not gather.
 - **Anything needing a call graph or a running system** — "is this endpoint actually
   reached by a retrying client?" answered by inference rather than by a caller you can
   cite. If you cannot name the caller, do not raise the finding.

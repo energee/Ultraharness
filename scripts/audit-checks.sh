@@ -272,7 +272,7 @@ LEDGER_STATE=missing
 echo "agents dir: .agents/ $AGENTS_STATE; ledger $LEDGER_STATE"
 
 # ---------------------------------------------------------------------------
-# gates: which conditional lenses apply (see <harness>/lenses/). Repo *shape*,
+# gates: which conditional lenses apply (see <ultraharness>/lenses/). Repo *shape*,
 # never a verdict on quality — the same class of fact as `detected:`. One line per
 # lens, alphabetical, printed every run: "not-fired" is a fact, and a withheld
 # lens must be distinguishable from a section that never ran.
@@ -284,7 +284,7 @@ echo "agents dir: .agents/ $AGENTS_STATE; ledger $LEDGER_STATE"
 # re-gates every repo. A fifth lens copies one of the shapes below.
 # ---------------------------------------------------------------------------
 
-# Gates judge the target's own *code*. CODE_FILES has already dropped the harness
+# Gates judge the target's own *code*. CODE_FILES has already dropped Ultraharness
 # footprint per the rule in AGENTS.md; these two exclusions go further, and they are
 # why this belongs in a script rather than in prose:
 #   CHANGELOG, docs/  — prose about the code, not the code

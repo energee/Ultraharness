@@ -1,6 +1,6 @@
 # Graph model design note
 
-The harness has two related graphs and deliberately stores neither in a graph
+Ultraharness has two related graphs and deliberately stores neither in a graph
 database.
 
 The **workflow graph** is short-lived execution state: finding IDs, dependencies,
