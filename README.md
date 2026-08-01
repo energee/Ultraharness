@@ -1,11 +1,14 @@
 # Ultraharness
 
-Point any coding agent at this repo to make **another** repo simpler, DRY-er, KISS,
-SOLID, and YAGNI — plus conditional lenses (idempotency, atomic design) that apply
-only if the repo has the thing they judge. There is no install and no runtime —
-everything here is markdown
-plus four thin bash scripts (one opt-in). The agent reads a front door, routes to a
-playbook, and does the rest.
+Ultraharness is a portable, agent-driven workflow harness for auditing, improving,
+and verifying software repositories. Point any coding agent at this repo to make
+**another** repo simpler, DRY-er, KISS, SOLID, and YAGNI — plus conditional lenses
+(idempotency, atomic design) that apply only if the repo has the thing they judge.
+
+It is a protocol harness, not an executable orchestrator: there is no install and no
+runtime. Everything here is markdown plus four thin bash scripts (one opt-in). The
+agent reads a front door, follows a controlled workflow with evidence gates and
+durable state, and does the work in the target repo.
 
 It never operates on itself unless you explicitly say so. `<target>` below is your
 repo; `<ultraharness>` is this one.
